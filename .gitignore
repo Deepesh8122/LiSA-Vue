@@ -28,3 +28,7 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+.package-lock.json
+composer.lock
+composer.phar
+composer-setup.php
