@@ -22,13 +22,15 @@ Homestead.json
 /.vagrant
 .phpunit.result.cache
 
+
+.package-lock.json
 /public/build
 /storage/pail
 .env.backup
 .env.production
 .phpactor.json
 auth.json
-.package-lock.json
+
 composer.lock
 composer.phar
 composer-setup.php
