@@ -24,6 +24,7 @@
   <script lang="ts" setup>
   import { ref } from "vue";
   import { UserProfile } from "./types/user";
+  import MaterialIcon from "@/components/Icons/MaterialIcon.vue";
   import ProfileSidebar from "@/components/UserProfile/ProfileSidebar.vue";
   import ProfileContent from "@/components/UserProfile/ProfileContent.vue";
   
