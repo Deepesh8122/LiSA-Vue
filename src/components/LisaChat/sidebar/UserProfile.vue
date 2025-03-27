@@ -91,10 +91,22 @@ export default {
       }
     };
 
+    const handleProfile = async () => {
+      try {
+        // Close dropdown
+        isDropdownOpen.value = false;
+        
+        // Navigate to profile page
+        await router.push({ name: 'UserProfile' });
+      } catch (error) {
+        console.error('Navigation failed:', error);
+      }
+    };
+
     const menuItems = ref([
       { icon: 'email', label: 'Deepesh@ha1ltd.com' },
       { icon: 'help_outline', label: 'Knowledge Base' },
-      { icon: 'person', label: 'Personal Account' },
+      { icon: 'person', label: 'Personal Account', onClick: handleProfile },
       { divider: true },
       { icon: 'work', label: 'Manage Workspace' },
       { icon: 'smart_toy', label: 'My LiSA' },
@@ -118,6 +130,7 @@ export default {
       dropdownContainer,
       menuItems,
       handleLogout,
+      handleProfile
     };
   },
 };

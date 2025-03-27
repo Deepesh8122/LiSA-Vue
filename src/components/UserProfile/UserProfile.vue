@@ -32,12 +32,12 @@ const isEditing = ref(false);
 const showSuccess = ref(false);
 
 const userData: UserProfile = {
-  name: "David Yang",
-  email: "david@example.com",
-  role: "Premium Member",
+  name: "Deep Yogi",
+  email: "deep@ha1.com",
+  role: "Frontend Developer",
   avatar: "https://placehold.co/400x400",
-  location: "San Francisco, CA",
-  timezone: "PST (GMT-8)",
+  location: "New Delhi, India",
+  timezone: "IST (GMT+5:30)",
   joined: "March 2023",
   bio: "Product designer and developer passionate about creating delightful user experiences. Leading design systems and user research initiatives.",
   phone: "+1 (555) 123-4567",

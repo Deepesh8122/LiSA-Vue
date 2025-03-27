@@ -1,5 +1,7 @@
 <template>
     <div class="flex flex-col font-[Inter] min-h-screen w-screen bg-[#F9F9F9]">
+      <ProfileHeader />
+
       <div class="max-w-[1200px] w-full mx-auto p-[24px]">
         <div class="flex gap-[24px] max-lg:flex-col">
           <ProfileSidebar :user="userData" @edit="isEditing = true" />
@@ -27,18 +29,20 @@
   import MaterialIcon from "@/components/Icons/MaterialIcon.vue";
   import ProfileSidebar from "@/components/UserProfile/ProfileSidebar.vue";
   import ProfileContent from "@/components/UserProfile/ProfileContent.vue";
+  import ProfileHeader from '@/components/UserProfile/ProfileHeader.vue';
+
   
   const activeTab = ref<"profile" | "activity">("profile");
   const isEditing = ref(false);
   const showSuccess = ref(false);
   
   const userData: UserProfile = {
-    name: "David Yang",
-    email: "david@example.com",
-    role: "Premium Member",
+    name: "Deep Yogi",
+    email: "deep@ha1.com",
+    role: "Frontend Developer",
     avatar: "https://placehold.co/400x400",
-    location: "San Francisco, CA",
-    timezone: "PST (GMT-8)",
+    location: "New Delhi, India",
+    timezone: "IST (GMT+5:30)",
     joined: "March 2023",
     bio: "Product designer and developer passionate about creating delightful user experiences. Leading design systems and user research initiatives.",
     phone: "+1 (555) 123-4567",
