@@ -18,3 +18,9 @@ export function useClickOutside(
     document.removeEventListener('mousedown', handleClickOutside)
   })
 }
+
+export interface SocialButtonProps {
+  variant?: 'primary' | 'outline'
+  fullWidth?: boolean
+  icon?: string
+}

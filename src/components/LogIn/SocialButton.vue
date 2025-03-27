@@ -13,10 +13,10 @@
 </template>
 
 <script setup lang="ts">
-import type { SocialButtonProps } from "./types";
+import type { SocialButtonProps } from './types'
 
 withDefaults(defineProps<SocialButtonProps>(), {
-  variant: "outline",
+  variant: 'outline',
   fullWidth: true,
-});
+})
 </script>
