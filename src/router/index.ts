@@ -8,8 +8,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'login',
-      component: LoginPage
+      redirect: '/chat'  // Redirect root to chat page
     },
     {
       path: '/chat',
@@ -21,6 +20,12 @@ const router = createRouter({
       name: 'UserProfile',
       component: UserProfilePage
     }
+    // Login route commented out for now
+    // {
+    //   path: '/login',
+    //   name: 'login',
+    //   component: LoginPage
+    // }
   ]
 })
 

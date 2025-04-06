@@ -16,6 +16,7 @@
       "@/*": ["src/*"]
     },
     "types": ["node", "vite/client"],
+    "typeRoots": ["./src/services", "./src/components/types", "node_modules/@types"],
     "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
   },
   "include": [
