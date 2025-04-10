@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import MaterialIcon from '@/components/Icons/MaterialIcon.vue';
+import MaterialIcon from '@/components/icons/MaterialIcon.vue';
 
 defineEmits(['toggle-sidebar'])
 </script>

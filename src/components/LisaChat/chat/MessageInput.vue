@@ -59,7 +59,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import MaterialIcon from '@/components/Icons/MaterialIcon.vue'
+import MaterialIcon from '@/components/icons/MaterialIcon.vue'
 import api from '@/services/api'
 import { v4 as uuidv4 } from 'uuid'
 

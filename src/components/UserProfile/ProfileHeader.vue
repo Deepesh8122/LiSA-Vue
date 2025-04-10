@@ -51,7 +51,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import MaterialIcon from '@/components/Icons/MaterialIcon.vue'
+import MaterialIcon from '@/components/icons/MaterialIcon.vue'
 
 const router = useRouter()
 const menuRef = ref<HTMLElement | null>(null)
