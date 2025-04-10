@@ -37,9 +37,9 @@
 <script setup lang="ts">
 import { ref, watch, defineExpose } from 'vue'
 import MaterialIcon from '@/components/icons/MaterialIcon.vue'
-import LiSAIcon from '@/components/Icons/LiSAIcon.vue'
-import FileIcon from '@/components/Icons/FileIcon.vue'
-import DownloadIcon from '@/components/Icons/DownloadIcon.vue'
+import LiSAIcon from '@/components/icons/LiSAIcon.vue'
+import FileIcon from '@/components/icons/FileIcon.vue'
+import DownloadIcon from '@/components/icons/DownloadIcon.vue'
 
 interface Message {
   id: number;
