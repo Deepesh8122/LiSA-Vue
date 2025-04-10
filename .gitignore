@@ -30,7 +30,7 @@ package-lock.json
 .env.production
 .phpactor.json
 auth.json
-/dish/
+/dist/
 
 
 composer.lock
