@@ -30,6 +30,8 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+/dish/
+
 
 composer.lock
 composer.phar
