@@ -17,11 +17,36 @@ export interface StatusResponse {
 }
 
 const apiClient = axios.create({
-  baseURL: 'http://109.228.57.128:8000/',
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json'
   },
+  timeout: 10000,
+  withCredentials: false
 });
+// Add request interceptor for debugging
+apiClient.interceptors.request.use(
+  config => {
+    console.log('Request:', {
+      url: config.url,
+      baseURL: config.baseURL,
+      method: config.method,
+      env: import.meta.env.MODE
+    });
+    return config;
+  },
+  error => {
+    console.error('Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// const apiClient = axios.create({
+//   baseURL: 'http://109.228.57.128:8000/',
+//   headers: {
+//     'Content-Type': 'application/json',
+//   },
+// });
 
 const api = {
   processPdfs(files: File[]): Promise<ApiResponse> {
@@ -41,9 +66,30 @@ const api = {
     });
   },
 
-  getStatus(): Promise<ApiResponse<StatusResponse>> {
-    return apiClient.get('/status');
+  async getStatus(): Promise<ApiResponse<StatusResponse>> {
+    try {
+      const response = await apiClient.get('/status');
+      return response;
+    } catch (error) {
+      console.error('API Error:', error);
+      console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
+      throw error;
+    }
   },
+
+  async testConnection(): Promise<void> {
+    try {
+      const response = await this.getStatus();
+      console.log('Connection successful:', response);
+    } catch (error) {
+      console.error('Connection test failed:', {
+        error,
+        baseURL: apiClient.defaults.baseURL,
+        env: import.meta.env.MODE
+      });
+      throw error;
+    }
+  }
 };
 
 export default api;
