@@ -16,14 +16,25 @@ export interface StatusResponse {
   message: string;
 }
 
+const getBaseUrl = () => {
+  if (import.meta.env.MODE === 'development') {
+    // Use direct API URL in development (assuming you're using Vite's dev server proxy)
+    return import.meta.env.VITE_API_BASE_URL;
+  } else {
+    // In production, use the /api prefix which will be handled by our server.js
+    return '/api';
+  }
+};
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json'
   },
   timeout: 10000,
   withCredentials: false
 });
+
 // Add request interceptor for debugging
 apiClient.interceptors.request.use(
   config => {

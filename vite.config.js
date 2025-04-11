@@ -11,6 +11,15 @@ export default defineConfig({
     vueDevTools(),
     tailwindcss()
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://109.228.57.128:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
+  },
   css: ['~/assets/css/main.css'],
   resolve: {
     alias: {
