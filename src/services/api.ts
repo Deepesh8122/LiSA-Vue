@@ -17,7 +17,7 @@ export interface StatusResponse {
 }
 
 const apiClient = axios.create({
-  baseURL: 'http://109.228.57.128:8000',
+  baseURL: 'http://109.228.57.128',
   headers: {
     'Content-Type': 'application/json',
   },
