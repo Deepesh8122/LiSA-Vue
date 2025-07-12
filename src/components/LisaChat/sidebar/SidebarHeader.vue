@@ -18,9 +18,8 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import MaterialIcon from '@/components/Icons/MaterialIcon.vue';
-import Tooltip from 'primevue/tooltip';
+<script setup>
+import MaterialIcon from '@/components/icons/MaterialIcon.vue';
 
 defineEmits(['toggle-sidebar'])
 </script>

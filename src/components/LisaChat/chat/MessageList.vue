@@ -83,106 +83,48 @@
           </button>
         </div>
 
+        <!-- Function Call Badge -->
+        <div v-if="message.functionCalls && message.functionCalls.length > 0" class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-2">
+          🔧 Used functions: {{ message.functionCalls.map(f => f.name).join(', ') }}
+        </div>
+
+        <!-- Sources Badge -->
+        <div v-if="message.sources && message.sources.length > 0" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded mt-2">
+          📚 Sources: {{ message.sources.length }} document(s)
+        </div>
+
+        <!-- Error Badge -->
+        <div v-if="message.isError" class="text-xs text-red-600 bg-red-50 px-2 py-1 rounded mt-2">
+          ⚠️ Error occurred
+        </div>
+
         <!-- <div class="text-xs text-stone-400 mt-1">
           {{ formatTimestamp(message.timestamp) }}
         </div> -->
       </div>
     </div>
+
+    <!-- Loading Indicator -->
+    <LoadingIndicator v-if="chatStore.isLoading" />
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import MaterialIcon from '@/components/Icons/MaterialIcon.vue'
-import LisaIcon from '@/components/Icons/LisaIcon.vue'
-import FileIcon from '@/components/Icons/FileIcon.vue'
-import DownloadIcon from '@/components/Icons/DownloadIcon.vue'
+import { useAppStore } from '@/stores/useAppStore.js'
+import MaterialIcon from '@/components/icons/MaterialIcon.vue'
+import LisaIcon from '@/components/icons/LiSAIcon.vue'
+import FileIcon from '@/components/icons/FileIcon.vue'
+import DownloadIcon from '@/components/icons/DownloadIcon.vue'
+import LoadingIndicator from './LoadingIndicator.vue'
 
-interface Message {
-  id: number;
-  sender: 'user' | 'ai';
-  type: 'text' | 'image' | 'code' | 'file';
-  content: string;
-  timestamp: Date;
-  alt?: string;
-  fileName?: string;
-  fileSize?: number;
-}
+const chatContainer = ref(null);
+const { chatStore } = useAppStore()
 
-const chatContainer = ref<HTMLElement | null>(null);
-const messages = ref<Message[]>([
-  {
-    id: 1,
-    sender: 'user',
-    type: 'text',
-    content: 'Can you show me how to implement a binary search tree in TypeScript?',
-    timestamp: new Date()
-  },
-  {
-    id: 2,
-    sender: 'ai',
-    type: 'code',
-    content: `class TreeNode {
-  value: number;
-  left: TreeNode | null;
-  right: TreeNode | null;
+// Use messages from the store
+const messages = chatStore.messages
 
-  constructor(value: number) {
-    this.value = value;
-    this.left = null;
-    this.right = null;
-  }
-}`,
-    timestamp: new Date()
-  },
-  {
-    id: 3,
-    sender: 'ai',
-    type: 'image',
-    content: 'https://miro.medium.com/v2/resize:fit:1400/format:webp/1*tUBYCHi32Zj0B2UCw0qmlA.png',
-    alt: 'Binary Search Tree Example',
-    timestamp: new Date()
-  },
-  {
-    id: 4,
-    sender: 'ai',
-    type: 'file',
-    content: '/files/bst-implementation.ts',
-    fileName: 'bst-implementation.ts',
-    fileSize: 1024 * 15, // 15KB
-    timestamp: new Date()
-  },
-  {
-    id: 5,
-    sender: 'user',
-    type: 'text',
-    content: "Explain superconductors like I'm five years old.",
-    timestamp: new Date()
-  },
-  {
-    id: 6,
-    sender: 'ai',
-    type: 'text',
-    content: "Sure! Imagine you have a slide in a playground. When you slide down, you can go really fast because the slide is smooth and slippery. <br /><br /> Now, think about electricity like little cars driving on a road. Normally, the road has bumps and cracks, so the cars can't go super fast and sometimes get stuck. <br /><br /> But in a superconductor, the road is perfectly smooth like the playground slide. This means the little cars (electricity) can zoom super fast without getting stuck or slowed down. <br /> <br /> Superconductors are special materials that make this super smooth road for electricity, but they only work when they are really, really cold, like as cold as outer space!",
-    timestamp: new Date()
-  },
-  {
-    id: 7,
-    sender: 'user',
-    type: 'text',
-    content: "Now explain it like I'm a physicist",
-    timestamp: new Date()
-  },
-  {
-    id: 8,
-    sender: 'ai',
-    type: 'text',
-    content: "Certainly! Here's a more detailed explanation: <br><br><br>Superconductors are materials that exhibit zero electrical resistance and expel magnetic fields below a critical temperature, discovered by Heike Kamerlingh Onnes in 1911.<br><br>In normal conductors, electron scattering causes electrical resistance. However, in superconductors, electrons form Cooper pairs that move without scattering, resulting in zero resistance and the Meissner effect (magnetic field expulsion).<br><br>Conventional superconductors are explained by BCS theory through electron-phonon interactions, while high-temperature superconductor mechanisms remain under study. Applications include MRI machines, particle accelerators, maglev trains, and quantum computing.",
-    timestamp: new Date()
-  },
-]);
-
-const formatTimestamp = (date: Date): string => {
+const formatTimestamp = (date) => {
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: 'numeric',
@@ -190,13 +132,13 @@ const formatTimestamp = (date: Date): string => {
   }).format(date);
 };
 
-const formatFileSize = (bytes: number): string => {
+const formatFileSize = (bytes) => {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 };
 
-const copyCode = async (code: string) => {
+const copyCode = async (code) => {
   try {
     await navigator.clipboard.writeText(code);
     // You might want to add a toast notification here
@@ -205,12 +147,12 @@ const copyCode = async (code: string) => {
   }
 };
 
-const openImagePreview = (src: string) => {
+const openImagePreview = (src) => {
   // Implement image preview modal
   console.log('Opening preview for:', src);
 };
 
-const downloadFile = (url: string) => {
+const downloadFile = (url) => {
   const link = document.createElement('a');
   link.href = url;
   link.download = url.split('/').pop() || 'download';

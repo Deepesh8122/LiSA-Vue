@@ -97,7 +97,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import MaterialIcon from '@/components/Icons/MaterialIcon.vue'
+import MaterialIcon from '@/components/icons/MaterialIcon.vue'
 
 interface Model {
   id: number

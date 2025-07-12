@@ -9,7 +9,10 @@
       ]"
     >
       <SidebarHeader @toggle-sidebar="toggleSidebar"/>
-      <ConversationList />
+      <div class="flex-1 overflow-y-auto">
+        <DocumentsList />
+        <ConversationList />
+      </div>
       <UserProfile />
     </div>
 
@@ -43,15 +46,19 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from "vue";
+<script setup>
+import { ref, onMounted } from "vue";
+import { useAppStore } from "@/stores/useAppStore.js";
 import SidebarHeader from "@/components/LisaChat/sidebar/SidebarHeader.vue";
 import SearchBar from "@/components/LisaChat/sidebar/SearchBar.vue";
 import ConversationList from "@/components/LisaChat/sidebar/ConversationList.vue";
+import DocumentsList from "@/components/LisaChat/sidebar/DocumentsList.vue";
 import UserProfile from "@/components/LisaChat/sidebar/UserProfile.vue";
 import ChatHeader from "@/components/LisaChat/chat/ChatHeader.vue";
 import MessageList from "@/components/LisaChat/chat/MessageList.vue";
 import MessageInput from "@/components/LisaChat/chat/MessageInput.vue";
+
+const { documentsStore, chatStore } = useAppStore();
 
 const isSidebarOpen = ref(window.innerWidth >= 768);
 
@@ -59,10 +66,14 @@ const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-// Close sidebar on route change (optional)
-// onBeforeRouteLeave(() => {
-//   isSidebarOpen.value = false;
-// });
+// Initialize stores when page loads
+onMounted(async () => {
+  try {
+    await documentsStore.loadDocuments();
+  } catch (error) {
+    console.error('Failed to load documents:', error);
+  }
+});
 </script>
 
 <style scoped>
