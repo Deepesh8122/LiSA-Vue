@@ -176,7 +176,7 @@ const renderedContent = computed(() => {
 
 /* Paragraphs */
 .markdown-content :deep(p) {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   color: #374151;
   line-height: 1.6;
 }

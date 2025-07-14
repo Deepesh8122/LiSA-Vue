@@ -59,7 +59,7 @@
             v-for="model in models"
             :key="model.id"
             @click="selectModel(model)"
-            class="flex items-start gap-3 w-full p-3 rounded-lg transition-colors cursor-pointer"
+            class="flex items-start gap-4 w-full p-3 rounded-lg transition-colors cursor-pointer"
             :class="[
               selectedModel.id === model.id ? 'bg-neutral-100' : 'hover:bg-neutral-50'
             ]"

@@ -1,8 +1,8 @@
 <template>
-  <div class="border-t border-solid border-t-gray-200 bg-white p-4 gap-2 flex flex-col">
+  <div class="border-t border-solid border-t-gray-200 bg-white py-6 px-0 gap-4 flex flex-col">
     
     <!-- File Upload Preview -->
-    <div v-if="selectedFiles.length > 0" class=" flex flex-wrap gap-2">
+    <div v-if="selectedFiles.length > 0" class=" flex flex-wrap gap-4">
       <div v-for="(file, index) in selectedFiles" :key="index" class="flex items-center gap-2 bg-gray-100 rounded-lg p-2">
         <span class="text-sm">{{ file.name }}</span>
         <button @click="removeFile(index)" class="text-red-500 hover:text-red-700">
@@ -80,7 +80,7 @@
       <button 
         aria-label="Attach file" 
         :class="[
-          'group p-2 flex items-center justify-center rounded-full h-10 w-10 transition-colors flex-shrink-0',
+          'group p-2 flex items-center justify-center rounded-full h-12 w-12 transition-colors flex-shrink-0',
           'bg-neutral-200 hover:bg-[#4318FF] cursor-pointer'
         ]"
         @click="$refs.fileInput.click()"
@@ -97,7 +97,7 @@
       <button 
         aria-label="Record voice message" 
         :class="[
-          'group p-2 flex items-center justify-center rounded-full h-10 w-10 transition-colors flex-shrink-0',
+          'group p-2 flex items-center justify-center rounded-full h-12 w-12 transition-colors flex-shrink-0',
           isRecording 
             ? 'bg-red-500 hover:bg-red-600 cursor-pointer animate-pulse' 
             : isProcessingAudio 
@@ -122,7 +122,7 @@
           placeholder="Type a message..."
           :disabled="isProcessing"
           :class="[
-            'w-full resize-none rounded-lg border border-gray-200 p-2 focus:outline-none focus:ring-2 focus:ring-[#4318FF] min-h-[40px] max-h-[120px]',
+            'w-full resize-none rounded-lg border border-gray-200 p-2 focus:outline-none focus:ring-2 focus:ring-[#4318FF] min-h-[48px] max-h-[120px]',
             isProcessing ? 'bg-gray-100 cursor-not-allowed' : ''
           ]"
           @keydown.enter.prevent="sendMessage"
@@ -132,7 +132,7 @@
       <button
         :disabled="(!message.trim() && selectedFiles.length === 0) || isProcessing"
         :class="[
-          'group p-2 flex items-center justify-center rounded-full h-10 w-10 transition-colors flex-shrink-0',
+          'group p-2 flex items-center justify-center rounded-full h-12 w-12 transition-colors flex-shrink-0',
           ((!message.trim() && selectedFiles.length === 0) || isProcessing)
             ? 'bg-gray-300 cursor-not-allowed' 
             : 'bg-neutral-200 hover:bg-[#4318FF] cursor-pointer'

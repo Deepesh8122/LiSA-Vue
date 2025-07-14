@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 border-t border-solid border-t-gray-200 relative" ref="dropdownContainer">
     <button 
-      class="flex gap-7 items-center w-full" 
+      class="flex gap-4 items-center w-full" 
       @click="toggleDropdown"
     >
       <div class="px-2 py-1.5 text-sm text-white bg-blue-600 rounded-lg">
@@ -9,7 +9,7 @@
       </div>
       <div class="flex flex-col gap-px flex-1 text-left">
         <div class="text-xs text-stone-500">Premium Account</div>
-        <div class="text-sm text-stone-500">Last updated 2h ago</div>
+        <div class="text-sm text-stone-500">Last updated 30 mins. ago</div>
       </div>
       <div
         v-html="

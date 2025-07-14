@@ -4,7 +4,7 @@
     <div
       class="flex flex-col h-screen bg-white border-r border-solid border-r-stone-300 transition-transform duration-300 ease-in-out fixed z-20"
       :class="[
-        'w-[300px]',
+        'w-[320px]',
         isSidebarOpen ? 'translate-x-0 md:relative' : 'md:absolute -translate-x-full',
       ]"
     >

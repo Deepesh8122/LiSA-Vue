@@ -33,29 +33,29 @@ const sections = ref<Section[]>([
   {
     title: 'Today',
     conversations: [
-      { id: 1, title: 'Amsterdam trip with the boys', icon: '🤖', isDropDown: true },
-      { id: 2, title: 'Code Review', icon: 'CR', isDropDown: true },
-      { id: 3, title: 'Bug Analysis', icon: 'BA', isDropDown: true }
+      { id: 1, title: 'Lease agreement summary for Unit 22', icon: 'LA', isDropDown: true },
+      { id: 2, title: 'Maintenance request: AC not working', icon: '🛠️', isDropDown: true },
+      { id: 3, title: 'Tenant payment status update', icon: '💳', isDropDown: true }
     ]
   },
   {
     title: 'Previous 7 Days',
     conversations: [
-      { id: 4, title: 'Feature Planning', icon: 'FP', isDropDown: true },
-      { id: 5, title: 'Design Review', icon: '🎨', isDropDown: true },
-      { id: 6, title: '3 day itinerary in the South of France', icon: '🎨', isDropDown: true }
+      { id: 4, title: 'Schedule property inspection', icon: '📅', isDropDown: true },
+      { id: 5, title: 'Discuss rent increase notice', icon: '📈', isDropDown: true },
+      { id: 6, title: 'Review tenant feedback', icon: '🗣️', isDropDown: true }
     ]
   },
   {
     title: 'Previous 30 Days',
     conversations: [
-      { id: 7, title: 'Superconductors: Smooth Roads', icon: 'FP', isDropDown: true },
-      { id: 8, title: 'Excited About a Job Opportunity', icon: '🎨', isDropDown: true },
-      { id: 9, title: 'Fun fact about the Roman Empire', icon: '🎨', isDropDown: true },
-      { id: 10, title: 'Marble Statue Pizza Cigar.', icon: '🎨', isDropDown: true },
-      { id: 11, title: 'Gradient Background Pack Giveaway', icon: '🎨', isDropDown: true },
-      { id: 12, title: 'Fern Gully, the Chief Leaf Officer', icon: '🎨', isDropDown: true },
-      { id: 13, title: 'Design an Uber-like app', icon: '🎨', isDropDown: true },
+      { id: 7, title: 'Resolve plumbing issue in Apt 5', icon: '🚰', isDropDown: true },
+      { id: 8, title: 'Send renewal reminder to tenants', icon: '🔔', isDropDown: true },
+      { id: 9, title: 'Update property listing details', icon: '🏠', isDropDown: true },
+      { id: 10, title: 'Confirm move-out inspection date', icon: '📆', isDropDown: true },
+      { id: 11, title: 'Handle security deposit queries', icon: '💰', isDropDown: true },
+      { id: 12, title: 'Review cleaning service contract', icon: '🧹', isDropDown: true },
+      { id: 13, title: 'Discuss pet policy changes', icon: '🐾', isDropDown: true },
     ]
   }
 ]);
