@@ -54,6 +54,7 @@ apiClient.interceptors.request.use(
 
 
 const api = {
+  // Legacy method - keeping for backward compatibility
   processPdfs(files: File[]): Promise<ApiResponse> {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
@@ -62,6 +63,164 @@ const api = {
         'Content-Type': 'multipart/form-data',
       },
     });
+  },
+
+  // New document upload method using the new API endpoint
+  uploadDocument(file: File, onProgress?: (progress: number) => void): Promise<ApiResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 30000, // Increase timeout for file uploads
+      onUploadProgress: onProgress ? (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / (progressEvent.total || file.size)
+        );
+        onProgress(percentCompleted);
+      } : undefined
+    });
+  },
+
+  // Method to handle multiple files using the new API (uploads all files in single request)
+  uploadDocuments(files: File[]): Promise<ApiResponse> {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    
+    return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 60000, // Increase timeout for multiple file uploads
+    });
+  },
+
+  // Enhanced bulk upload with progress tracking
+  async uploadDocumentsWithProgress(files: File[], onProgress?: (progress: number) => void): Promise<ApiResponse> {
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+      
+      const result = await axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000, // Increase timeout for multiple file uploads
+        onUploadProgress: onProgress ? (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total || files.reduce((acc, file) => acc + file.size, 0))
+          );
+          onProgress(percentCompleted);
+        } : undefined
+      });
+      
+      return result;
+    } catch (error: any) {
+      // Provide more detailed error information
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Upload timeout - please check your connection and try again');
+      } else if (error.response?.status === 413) {
+        throw new Error('Files too large - please upload smaller files');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error - please try again later');
+      } else if (error.response?.status >= 400) {
+        throw new Error(`Upload failed: ${error.response.data?.message || 'Invalid file format'}`);
+      } else {
+        throw new Error(`Upload failed: ${error.message || 'Unknown error'}`);
+      }
+    }
+  },
+
+  // Enhanced upload with individual progress tracking
+  async uploadDocumentWithProgress(file: File, onProgress?: (progress: number) => void): Promise<ApiResponse> {
+    try {
+      const result = await this.uploadDocument(file, onProgress);
+      return result;
+    } catch (error: any) {
+      // Provide more detailed error information
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Upload timeout - please check your connection and try again');
+      } else if (error.response?.status === 413) {
+        throw new Error('File too large - please upload files smaller than 10MB');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error - please try again later');
+      } else if (error.response?.status >= 400) {
+        throw new Error(`Upload failed: ${error.response.data?.message || 'Invalid file format'}`);
+      } else {
+        throw new Error(`Upload failed: ${error.message || 'Unknown error'}`);
+      }
+    }
+  },
+
+  // New method for the chat query endpoint
+  async chatQuery(message: string): Promise<ApiResponse<AskResponse>> {
+    return axios.post('http://109.228.57.128:8080/chat/query', {
+      message: message
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 60000, // Increased to 60 seconds for chat queries
+    });
+  },
+
+  // Speech-to-text method using Hugging Face Whisper API
+  async speechToText(audioBlob: Blob): Promise<ApiResponse<string>> {
+    try {
+      const hfToken = import.meta.env.VITE_HF_TOKEN;
+      if (!hfToken) {
+        throw new Error('HF_TOKEN not found in environment variables');
+      }
+
+      // Determine content type based on blob type
+      let contentType = 'audio/flac';
+      if (audioBlob.type.includes('wav')) {
+        contentType = 'audio/wav';
+      } else if (audioBlob.type.includes('webm')) {
+        contentType = 'audio/webm';
+      } else if (audioBlob.type.includes('mp4')) {
+        contentType = 'audio/mp4';
+      }
+
+      console.log('Sending audio with content type:', contentType, 'Size:', audioBlob.size);
+
+      const response = await axios.post(
+        'https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3-turbo',
+        audioBlob,
+        {
+          headers: {
+            'Authorization': `Bearer ${hfToken}`,
+            'Content-Type': contentType,
+            'Accept': 'application/json',
+            'X-HF-Bill-To': 'artglobal'
+          },
+          timeout: 30000, // 30 seconds timeout for speech processing
+        }
+      );
+
+      return {
+        data: response.data.text || response.data,
+        status: response.status
+      };
+    } catch (error: any) {
+      console.error('Speech-to-text error:', error);
+      
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Speech processing timed out - please try again with a shorter recording');
+      } else if (error.response?.status === 401) {
+        throw new Error('Authentication failed - invalid HF token');
+      } else if (error.response?.status === 413) {
+        throw new Error('Audio file too large - please try a shorter recording');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Speech service temporarily unavailable - please try again');
+      } else if (error.response?.status >= 400) {
+        throw new Error(`Speech processing failed: ${error.response.data?.message || 'Invalid audio format'}`);
+      } else {
+        throw new Error(`Speech processing failed: ${error.message || 'Unknown error'}`);
+      }
+    }
   },
 
   askQuestion(question: string, sessionId: string): Promise<ApiResponse<AskResponse>> {

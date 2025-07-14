@@ -8,25 +8,39 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/chat'  // Redirect root to chat page
+      redirect: '/login'
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginPage
     },
     {
       path: '/chat',
       name: 'chat',
-      component: LisaChatPage
+      component: LisaChatPage,
+      meta: { requiresAuth: true }
     },
     {
       path: '/user-profile',
       name: 'UserProfile',
-      component: UserProfilePage
+      component: UserProfilePage,
+      meta: { requiresAuth: true }
     }
-    // Login route commented out for now
-    // {
-    //   path: '/login',
-    //   name: 'login',
-    //   component: LoginPage
-    // }
   ]
+})
+
+// Navigation guard for authentication
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+  
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next('/login')
+  } else if (to.path === '/login' && isAuthenticated) {
+    next('/chat')
+  } else {
+    next()
+  }
 })
 
 export default router

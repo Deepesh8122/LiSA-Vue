@@ -32,6 +32,14 @@
         type="email"
       />
 
+      <FormInput
+        v-model="password"
+        label="Password"
+        placeholder="Enter your password"
+        type="password"
+        class="mt-4"
+      />
+
       <label
         class="flex gap-2 items-center mt-4 w-full text-sm leading-none text-gray-800"
       >
@@ -48,7 +56,7 @@
         variant="primary"
         @click="handleSubmit"
       >
-        Continue with Email
+        Sign In
       </SocialButton>
 
       <p
@@ -69,6 +77,14 @@
       >
         Continue with Google
       </SocialButton>
+
+      <div class="mt-4 text-center">
+        <p class="text-sm text-gray-600">
+          Demo credentials:<br>
+          Email: admin@lisa.com<br>
+          Password: lisa123
+        </p>
+      </div>
     </form>
   </section>
 </template>
@@ -81,18 +97,32 @@ import SocialButton from "./SocialButton.vue";
 
 const router = useRouter();
 const email = ref("");
+const password = ref("");
 const rememberMe = ref(false);
+
+// Hardcoded credentials
+const HARDCODED_EMAIL = "admin@lisa.com";
+const HARDCODED_PASSWORD = "lisa123";
 
 const handleSubmit = async (event: Event) => {
   event.preventDefault();
   
   try {
     // Basic validation
-    if (!email.value) {
-      alert('Please enter your email');
+    if (!email.value || !password.value) {
+      alert('Please enter both email and password');
       return;
     }
 
+    // Check against hardcoded credentials
+    if (email.value !== HARDCODED_EMAIL || password.value !== HARDCODED_PASSWORD) {
+      alert('Invalid credentials. Use: admin@lisa.com / lisa123');
+      return;
+    }
+
+    // Set authentication state
+    localStorage.setItem('isAuthenticated', 'true');
+    
     // Store user data if remember me is checked
     if (rememberMe.value) {
       localStorage.setItem('user-email', email.value);
@@ -100,9 +130,7 @@ const handleSubmit = async (event: Event) => {
 
     // Navigate to chat page
     await router.push({ 
-      name: 'chat',
-      // Optional: Pass any required data
-      // params: { userId: '123' }
+      name: 'chat'
     });
   } catch (error) {
     console.error('Navigation failed:', error);

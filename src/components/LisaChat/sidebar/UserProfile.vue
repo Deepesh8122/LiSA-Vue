@@ -80,6 +80,7 @@ export default {
         // Clear any stored user data
         localStorage.removeItem('user-email');
         localStorage.removeItem('user');
+        localStorage.removeItem('isAuthenticated'); // Clear authentication state
         
         // Close dropdown
         isDropdownOpen.value = false;
