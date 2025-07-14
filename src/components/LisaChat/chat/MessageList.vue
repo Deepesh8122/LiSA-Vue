@@ -1,13 +1,33 @@
 <template>
-  <div ref="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+  <div
+    ref="chatContainer"
+    class="overflow-y-auto p-4 space-y-4"
+    :class="{
+      'pointer-events-none flex-0 mt-[50%] pb-[40px]': messages.length === 0,
+      'flex-1': messages.length > 0
+    }"
+    :aria-disabled="messages.length === 0"
+  >
+    <transition name="fade">
+      <div v-if="messages.length === 0" class="flex items-center justify-center h-full text-lg text-[30px] font-noramal color-[#4318FF]">
+        <LiSAIcon class="mr-4 w-[35px] h-[35px]" />
+        Ready when you are.
+      </div>
+    </transition>
     <div v-for="message in messages" :key="message.id" class="flex items-start gap-3">
       <!-- User/AI Icon -->
       <div class="flex-shrink-0 w-8 h-8">
-        <div v-if="message.sender === 'user'" class="w-8 h-8 rounded-full bg-[#4318FF] flex items-center justify-center">
+        <div v-if="message.sender === 'user'" 
+             class="w-8 h-8 rounded-full bg-[#4318FF] flex items-center justify-center"
+             :class="{
+               'pointer-events-none flex-0 mt-[50%] pb-[40px]': messages.length === 0,
+               'flex-1': messages.length > 0
+             }"
+        >
           <MaterialIcon name="person" size="text-base" color="text-white" />
         </div>
         <div v-else class="w-8 h-8">
-          <LiSAIcon />
+          <LiSAIcon class="mr-4 w-[30px] h-[30px]"/>
         </div>
       </div>
 
@@ -15,7 +35,11 @@
       <div class="flex-1">
         <!-- Text Message -->
         <div v-if="message.type === 'text'">
-          <MarkdownRenderer :content="message.content" />
+          <MarkdownRenderer :content="message.content"
+          :class="{
+            'pointer-events-none flex-0 mt-[50%] pb-[40px]': messages.length === 0,
+            'flex-1': messages.length > 0
+          }" />
         </div>
 
         <!-- File Message -->
@@ -224,5 +248,19 @@ watch(() => messages.value.length, () => {
 .flex-col-reverse {
   display: flex;
   flex-direction: column-reverse;
+}
+/* Optionally, you can add a cursor style for disabled state */
+.pointer-events-none[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+/* Fade animation for "Ready when you are." */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+.fade-enter-to, .fade-leave-from {
+  opacity: 1;
 }
 </style>

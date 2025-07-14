@@ -1,5 +1,71 @@
 <template>
-  <div class="border-t border-solid border-t-gray-200 bg-white p-4">
+  <div class="border-t border-solid border-t-gray-200 bg-white p-4 gap-2 flex flex-col">
+    
+    <!-- File Upload Preview -->
+    <div v-if="selectedFiles.length > 0" class=" flex flex-wrap gap-2">
+      <div v-for="(file, index) in selectedFiles" :key="index" class="flex items-center gap-2 bg-gray-100 rounded-lg p-2">
+        <span class="text-sm">{{ file.name }}</span>
+        <button @click="removeFile(index)" class="text-red-500 hover:text-red-700">
+          <MaterialIcon name="close" size="text-xs" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Inline Upload Progress -->
+    <div v-if="isUploading" class=" space-y-2">
+      <!-- Progress Bar -->
+      <div class="w-full bg-gray-200 rounded-full h-1">
+        <div 
+          class="bg-[#4318FF] h-1 rounded-full transition-all duration-300" 
+          :style="{ width: uploadProgress + '%' }"
+        ></div>
+      </div>
+      
+      <!-- Upload Status -->
+      <div class="text-xs text-gray-600">
+        {{ uploadProgressText }}
+      </div>
+      
+      <!-- Individual File Status -->
+      <div class="space-y-1">
+        <div v-for="(file, index) in uploadingFiles" :key="index" class="text-xs flex items-center justify-between">
+          <span class="truncate flex-1">{{ file.name }}</span>
+          <span class="ml-2 text-xs">
+            <span v-if="file.status === 'uploading'" class="text-blue-600">Uploading...</span>
+            <span v-else-if="file.status === 'completed'" class="text-green-600">✓</span>
+            <span v-else-if="file.status === 'error'" class="text-red-600">✗</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Summary -->
+    <div v-if="uploadSummary" class=" p-2 bg-blue-50 rounded-lg">
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-blue-800">{{ uploadSummary }}</span>
+        <button @click="uploadSummary = ''" class="text-blue-600 hover:text-blue-800">
+          <MaterialIcon name="close" size="text-xs" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Recording Status -->
+    <div v-if="isRecording" class=" p-2 bg-red-50 rounded-lg border border-red-200">
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+        <span class="text-xs text-red-800">Recording... {{ formatDuration(recordingDuration) }}</span>
+        <span class="text-xs text-red-600 ml-auto">Click mic to stop</span>
+      </div>
+    </div>
+
+    <!-- Processing Audio Status -->
+    <div v-if="isProcessingAudio" class=" p-2 bg-blue-50 rounded-lg">
+      <div class="flex items-center gap-2">
+        <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+        <span class="text-xs text-blue-800">Processing voice recording...</span>
+      </div>
+    </div>
+
     <div class="flex items-end gap-3">
       <!-- File Input -->
       <input 
@@ -82,71 +148,6 @@
           color="text-stone-400 group-hover:text-white" 
         />
       </button>
-    </div>
-    
-    <!-- File Upload Preview -->
-    <div v-if="selectedFiles.length > 0" class="mt-2 flex flex-wrap gap-2">
-      <div v-for="(file, index) in selectedFiles" :key="index" class="flex items-center gap-2 bg-gray-100 rounded-lg p-2">
-        <span class="text-sm">{{ file.name }}</span>
-        <button @click="removeFile(index)" class="text-red-500 hover:text-red-700">
-          <MaterialIcon name="close" size="text-xs" />
-        </button>
-      </div>
-    </div>
-
-    <!-- Inline Upload Progress -->
-    <div v-if="isUploading" class="mt-2 space-y-2">
-      <!-- Progress Bar -->
-      <div class="w-full bg-gray-200 rounded-full h-1">
-        <div 
-          class="bg-[#4318FF] h-1 rounded-full transition-all duration-300" 
-          :style="{ width: uploadProgress + '%' }"
-        ></div>
-      </div>
-      
-      <!-- Upload Status -->
-      <div class="text-xs text-gray-600">
-        {{ uploadProgressText }}
-      </div>
-      
-      <!-- Individual File Status -->
-      <div v-if="uploadingFiles.length > 0" class="space-y-1">
-        <div v-for="(file, index) in uploadingFiles" :key="index" class="text-xs flex items-center justify-between">
-          <span class="truncate flex-1">{{ file.name }}</span>
-          <span class="ml-2 text-xs">
-            <span v-if="file.status === 'uploading'" class="text-blue-600">Uploading...</span>
-            <span v-else-if="file.status === 'completed'" class="text-green-600">✓</span>
-            <span v-else-if="file.status === 'error'" class="text-red-600">✗</span>
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Upload Summary -->
-    <div v-if="uploadSummary" class="mt-2 p-2 bg-blue-50 rounded-lg">
-      <div class="flex items-center justify-between">
-        <span class="text-xs text-blue-800">{{ uploadSummary }}</span>
-        <button @click="uploadSummary = ''" class="text-blue-600 hover:text-blue-800">
-          <MaterialIcon name="close" size="text-xs" />
-        </button>
-      </div>
-    </div>
-
-    <!-- Recording Status -->
-    <div v-if="isRecording" class="mt-2 p-2 bg-red-50 rounded-lg border border-red-200">
-      <div class="flex items-center gap-2">
-        <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-        <span class="text-xs text-red-800">Recording... {{ formatDuration(recordingDuration) }}</span>
-        <span class="text-xs text-red-600 ml-auto">Click mic to stop</span>
-      </div>
-    </div>
-
-    <!-- Processing Audio Status -->
-    <div v-if="isProcessingAudio" class="mt-2 p-2 bg-blue-50 rounded-lg">
-      <div class="flex items-center gap-2">
-        <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
-        <span class="text-xs text-blue-800">Processing voice recording...</span>
-      </div>
     </div>
   </div>
 </template>
