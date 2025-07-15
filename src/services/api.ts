@@ -52,6 +52,7 @@ apiClient.interceptors.request.use(
   }
 );
 
+const HF_BEARER_TOKEN = import.meta.env.VITE_HF_TOKEN;
 
 const api = {
   // Legacy method - keeping for backward compatibility
@@ -69,12 +70,13 @@ const api = {
   uploadDocument(file: File, onProgress?: (progress: number) => void): Promise<ApiResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${HF_BEARER_TOKEN}`
       },
-      timeout: 30000, // Increase timeout for file uploads
+      timeout: 30000,
       onUploadProgress: onProgress ? (progressEvent) => {
         const percentCompleted = Math.round(
           (progressEvent.loaded * 100) / (progressEvent.total || file.size)
@@ -88,12 +90,13 @@ const api = {
   uploadDocuments(files: File[]): Promise<ApiResponse> {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
-    
+
     return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${HF_BEARER_TOKEN}`
       },
-      timeout: 60000, // Increase timeout for multiple file uploads
+      timeout: 100000,
     });
   },
 
@@ -102,12 +105,13 @@ const api = {
     try {
       const formData = new FormData();
       files.forEach(file => formData.append('files', file));
-      
+
       const result = await axios.post('http://109.228.57.128:8080/documents/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${HF_BEARER_TOKEN}`
         },
-        timeout: 60000, // Increase timeout for multiple file uploads
+        timeout: 100000,
         onUploadProgress: onProgress ? (progressEvent) => {
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / (progressEvent.total || files.reduce((acc, file) => acc + file.size, 0))
@@ -115,7 +119,7 @@ const api = {
           onProgress(percentCompleted);
         } : undefined
       });
-      
+
       return result;
     } catch (error: any) {
       // Provide more detailed error information
@@ -161,8 +165,9 @@ const api = {
     }, {
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${HF_BEARER_TOKEN}`
       },
-      timeout: 60000, // Increased to 60 seconds for chat queries
+      timeout: 100000,
     });
   },
 
