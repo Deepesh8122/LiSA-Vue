@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4 border-t border-solid border-t-gray-200 relative" ref="dropdownContainer">
+  <div class="p-4 border-t border-solid border-t-gray-500 relative" ref="dropdownContainer">
     <button 
       class="flex gap-4 items-center w-full" 
       @click="toggleDropdown"
@@ -22,20 +22,20 @@
     <transition name="dropdown">
       <div 
         v-if="isDropdownOpen" 
-        class="absolute bottom-full mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+        class="absolute bottom-full mb-2 w-64 bg-neutral-200 border border-gray-200 rounded-lg shadow-xl/30 inset-shadow-2xs z-10"
       >
         <ul class="py-2">
           <template v-for="(item, index) in menuItems" :key="index">
             <li 
                 v-if="!item.divider" 
-                class="px-4 py-2 flex items-center gap-2 hover:bg-gray-100 cursor-pointer text-[14px] text-stone-600"
+                class="px-4 py-2 flex items-center gap-2 hover:bg-neutral-300 cursor-pointer text-[14px] text-zinc-900"
                 @click="item.onClick ? item.onClick() : null"
               >
                 <MaterialIcon 
                   :name="item.icon"
                   size="sm" 
-                  color="text-stone-400 text-[18px]" 
-                  customClass="hover:text-stone-600 p-2 rounded-full hover:bg-stone-100 cursor-pointer"
+                  color="text-stone-500 text-[18px]" 
+                  customClass="hover:text-zinc-900 p-2 rounded-full hover:bg-neutral-500 cursor-pointer"
                 />
                 {{ item.label }}
               </li>

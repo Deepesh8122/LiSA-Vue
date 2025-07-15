@@ -145,7 +145,12 @@
           v-else
           name="send" 
           size="text-xs" 
-          color="text-stone-400 group-hover:text-white" 
+          :class="[
+          'text-stone-400',
+          ((!message.trim() && selectedFiles.length === 0) || isProcessing)
+            ? 'bg-gray-300 cursor-not-allowed' 
+            : 'group-hover:text-white cursor-pointer'
+        ]"
         />
       </button>
     </div>
