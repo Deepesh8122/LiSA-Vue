@@ -1,5 +1,37 @@
 <template>
   <div class="flex w-full max-w-screen h-screen max-h-screen bg-white overflow-hidden main-page relative">
+    <!-- Welcome Pop-up -->
+    <transition name="fade">
+      <div
+        v-if="showWelcome"
+        class="fixed inset-0 flex items-center justify-center bg-stone-300/50 z-50"
+      >
+        <div class="bg-white rounded-xl shadow-xl p-8 flex flex-col items-center max-w-sm w-full">
+          <div class="mb-4">
+            <svg viewBox="0 0 40 40" width="48" height="48">
+              <defs>
+                <linearGradient id="welcome-gradient" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#4318FF"/>
+                  <stop offset="100%" stop-color="#FF3D77"/>
+                </linearGradient>
+              </defs>
+              <circle cx="20" cy="20" r="18" fill="url(#welcome-gradient)" />
+              <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="18" font-family="Arial" dy=".3em">👋</text>
+            </svg>
+          </div>
+          <h3 class="text-3xl font-bold mb-2 text-[#4318FF]">Hello Hitesh!</h3>
+          <h2 class="text-[20px] font-bold mb-2 text-[#4318FF]">Welcome Back</h2>
+          <p class="text-gray-600 mb-6 text-center">Ask anything about your property management, lease, maintenance, or tenants. LiSA is here to help!</p>
+          <button
+            class="bg-gradient-to-r from-[#4318FF] to-[#FF3D77] text-white px-6 py-2 rounded-lg font-semibold shadow hover:from-[#4318FF]/80 hover:to-[#FF3D77]/80 transition"
+            @click="showWelcome = false"
+          >
+            Get Started
+          </button>
+        </div>
+      </div>
+    </transition>
+
     <!-- Sidebar with transitions -->
     <div
       class="flex flex-col h-screen bg-white border-r border-solid border-r-stone-300 transition-transform duration-300 ease-in-out fixed z-20"
@@ -33,7 +65,7 @@
           :is-sidebar-open="isSidebarOpen" 
           @toggle-sidebar="toggleSidebar" 
         />
-      <div class="flex flex-col flex-1 max-w-[767px] mx-auto w-full overflow-hidden">
+      <div class="flex flex-col flex-1 max-w-[767px] mx-auto w-full overflow-hidden justify-center">
         <MessageList ref="messageList" />
         <MessageInput @message-sent="handleMessage" />
       </div>
@@ -76,6 +108,7 @@ interface MessageData {
 const isSidebarOpen = ref(window.innerWidth >= 768);
 const messageList = ref<InstanceType<typeof MessageList> | null>(null);
 const toasts = ref<Array<{ id: number; type: 'success' | 'error'; message: string }>>([]);
+const showWelcome = ref(true);
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -109,13 +142,22 @@ const handleMessage = async (messageData: MessageData) => {
 // Check API status on component mount
 api.getStatus()
   .then(() => showToast('Connected to API successfully'))
-  .catch((err: Error) => showToast('Unable to connect to API', 'error'));
+  .catch((err: Error) => showToast('', 'error'));
 </script>
 
 <style scoped>
 .main-page {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.4s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+.fade-enter-to, .fade-leave-from {
+  opacity: 1;
 }
 
 /* Add will-change to optimize animation performance */

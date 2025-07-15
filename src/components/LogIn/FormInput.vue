@@ -14,7 +14,7 @@
         $emit('update:modelValue', ($event.target as HTMLInputElement).value)
       "
       :placeholder="placeholder"
-      class="py-3 px-4 mt-2 text-base rounded-xl border border-black border-solid bg-slate-50 text-neutral-400 w-full"
+      class="py-3 px-4 mt-2 text-base rounded-xl border border-black border-solid bg-slate-50 text-neutral-700  w-full"
     />
   </div>
 </template>

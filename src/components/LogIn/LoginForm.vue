@@ -17,7 +17,7 @@
         Welcome Back
       </h1>
       <p class="mt-2 text-lg/7 text-6 leading-6 text-black">
-        Welcome back! Please enter your details.
+        Please enter your details.
       </p>
     </header>
 
@@ -66,25 +66,25 @@
         <a href="#" class="font-medium text-indigo-600">Sign up</a>
       </p>
 
-      <div class="relative flex items-center justify-center mt-10">
+      <!-- <div class="relative flex items-center justify-center mt-10">
         <hr class="w-full border-t border-gray-300" />
         <span class="absolute px-4 text-sm text-black bg-white">or</span>
-      </div>
+      </div> -->
 
-      <SocialButton
+      <!-- <SocialButton
         class="mt-10 md:mb-5"
         icon="https://cdn.builder.io/api/v1/image/assets/76072caaf8fb442d98226c591a72f472/ccb5427375dd6195e2d5d092b9d2e527242cc54e?placeholderIfAbsent=true"
       >
         Continue with Google
-      </SocialButton>
+      </SocialButton> -->
 
-      <div class="mt-4 text-center">
+      <!-- <div class="mt-4 text-center">
         <p class="text-sm text-gray-600">
           Demo credentials:<br>
           Email: admin@lisa.com<br>
           Password: lisa123
         </p>
-      </div>
+      </div> -->
     </form>
   </section>
 </template>
@@ -101,7 +101,7 @@ const password = ref("");
 const rememberMe = ref(false);
 
 // Hardcoded credentials
-const HARDCODED_EMAIL = "admin@lisa.com";
+const HARDCODED_EMAILS = ["admin@lisa.com", "hitesh@ha1ltd.com"];
 const HARDCODED_PASSWORD = "lisa123";
 
 const handleSubmit = async (event: Event) => {
@@ -114,9 +114,9 @@ const handleSubmit = async (event: Event) => {
       return;
     }
 
-    // Check against hardcoded credentials
-    if (email.value !== HARDCODED_EMAIL || password.value !== HARDCODED_PASSWORD) {
-      alert('Invalid credentials. Use: admin@lisa.com / lisa123');
+    // Check against allowed emails and password
+    if (!HARDCODED_EMAILS.includes(email.value) || password.value !== HARDCODED_PASSWORD) {
+      alert('Invalid credentials. Use: admin@lisa.com / lisa123 or hitesh@ha1ltd.com / lisa123');
       return;
     }
 

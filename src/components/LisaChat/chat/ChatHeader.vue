@@ -109,19 +109,19 @@ interface Model {
 const models: Model[] = [
   {
     id: 1,
-    name: 'LiSA-1.o',
+    name: 'LiSA-1.0',
     description: 'Newest and most advanced model',
     icon: 'rocket_launch'
   },
   {
     id: 2,
-    name: 'LiSA-2.o',
+    name: 'LiSA-2.0',
     description: 'Advanced model for complex tasks',
     icon: 'network_intel_node'
   },
   {
     id: 3,
-    name: 'LiSA-3.o',
+    name: 'LiSA-3.0',
     description: 'Great for everyday tasks',
     icon: 'lightbulb'
   }

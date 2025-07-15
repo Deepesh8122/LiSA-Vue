@@ -3,7 +3,7 @@
     ref="chatContainer"
     class="overflow-y-auto py-4 space-y-6 flex flex-col"
     :class="{
-      'pointer-events-none flex-0 mt-[50%] pb-[40px]': messages.length === 0,
+      'pointer-events-none flex-0 pb-[40px]': messages.length === 0,
       'flex mt-auto': messages.length > 0
     }"
     :aria-disabled="messages.length === 0"
@@ -29,10 +29,6 @@
       <div class="flex-shrink-0 w-8 h-8">
         <div v-if="message.sender === 'user'" 
              class="w-8 h-8 rounded-full bg-[#4318FF] flex items-center justify-center"
-             :class="{
-               'pointer-events-none flex-0 mt-[50%] pb-[40px]': messages.length === 0,
-               'flex-1': messages.length > 0
-             }"
         >
           <MaterialIcon name="person" size="text-base" color="text-white" />
         </div>

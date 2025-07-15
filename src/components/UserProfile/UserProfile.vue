@@ -32,8 +32,8 @@ const isEditing = ref(false);
 const showSuccess = ref(false);
 
 const userData: UserProfile = {
-  name: "Deep Yogi",
-  email: "deep@ha1.com",
+  name: "hitesh",
+  email: "hitesh@ha1.com",
   role: "Frontend Developer",
   avatar: "https://placehold.co/400x400",
   location: "New Delhi, India",

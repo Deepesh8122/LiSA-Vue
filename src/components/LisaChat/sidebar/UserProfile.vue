@@ -5,7 +5,7 @@
       @click="toggleDropdown"
     >
       <div class="px-2 py-1.5 text-sm text-white bg-blue-600 rounded-lg">
-        DY
+        HB
       </div>
       <div class="flex flex-col gap-px flex-1 text-left">
         <div class="text-xs text-stone-500">Premium Account</div>
@@ -28,18 +28,18 @@
           <template v-for="(item, index) in menuItems" :key="index">
             <li 
                 v-if="!item.divider" 
-                class="px-4 py-2 flex items-center gap-2 hover:bg-gray-100 cursor-pointer"
+                class="px-4 py-2 flex items-center gap-2 hover:bg-gray-100 cursor-pointer text-[14px] text-stone-600"
                 @click="item.onClick ? item.onClick() : null"
               >
                 <MaterialIcon 
                   :name="item.icon"
                   size="sm" 
-                  color="text-stone-400" 
+                  color="text-stone-400 text-[18px]" 
                   customClass="hover:text-stone-600 p-2 rounded-full hover:bg-stone-100 cursor-pointer"
                 />
                 {{ item.label }}
               </li>
-            <hr v-else class="my-2" />
+            <hr v-else class="my-2 border-gray-300" />
           </template>
         </ul>
       </div>
@@ -104,8 +104,10 @@ export default {
       }
     };
 
+    const userEmail = localStorage.getItem('user-email') || 'hitesh@ha1ltd.com';
+
     const menuItems = ref([
-      { icon: 'email', label: 'Deepesh@ha1ltd.com' },
+      { icon: 'email', label: userEmail },
       { icon: 'help_outline', label: 'Knowledge Base' },
       { icon: 'person', label: 'Personal Account', onClick: handleProfile },
       { divider: true },
