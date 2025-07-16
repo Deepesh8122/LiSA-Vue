@@ -14,7 +14,7 @@
       <p class="mt-4">
         Streamline your business operations with our innovative platform.
       </p>
-      <p class="mt-4">Join over 10,000+ companies already growing with us.</p>
+      <!-- <p class="mt-4">Join over 10,000+ companies already growing with us.</p> -->
     </div>
   </section>
 </template>
