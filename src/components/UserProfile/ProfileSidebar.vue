@@ -105,7 +105,7 @@
 </template>
 
 <script lang="ts" setup>
-import { UserProfile } from "@/componeents/types/user.vue";
+import { UserProfile } from "@/components/UserProfile/types/user";
 
 defineProps<{
   user: UserProfile;

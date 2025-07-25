@@ -50,7 +50,7 @@
 <script>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router'; // Add this import
-import MaterialIcon from '@/components/Icons/MaterialIcon.vue';
+import MaterialIcon from '@/components/icons/MaterialIcon.vue';
 
 
 export default {

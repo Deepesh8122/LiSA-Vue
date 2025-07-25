@@ -71,9 +71,9 @@
   
   <script setup lang="ts">
   import { ref, onMounted, onUnmounted } from 'vue'
-  import EditIcon from '@/components/Icons/EditIcon.vue'
-  import DeleteIcon from '@/components/Icons/DeleteIcon.vue'
-  import RenameIcon from '@/components/Icons/RenameIcon.vue'
+  import EditIcon from '@/components/icons/EditIcon.vue'
+  import DeleteIcon from '@/components/icons/DeleteIcon.vue'
+  import RenameIcon from '@/components/icons/RenameIcon.vue'
   
   interface Conversation {
     id: number;
