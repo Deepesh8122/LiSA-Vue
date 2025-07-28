@@ -71,20 +71,8 @@
       </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div class="fixed bottom-4 right-4 flex flex-col gap-2">
-      <div 
-        v-for="toast in toasts" 
-        :key="toast.id"
-        :class="{
-          'bg-red-500': toast.type === 'error',
-          'bg-green-500': toast.type === 'success'
-        }"
-        class="text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300"
-      >
-        {{ toast.message }}
-      </div>
-    </div>
+    <!-- Enhanced Toast Notifications -->
+    <ToastNotification ref="toastInstance" />
   </div>
 </template>
 
@@ -96,6 +84,9 @@ import UserProfile from "@/components/LisaChat/sidebar/UserProfile.vue";
 import ChatHeader from "@/components/LisaChat/chat/ChatHeader.vue";
 import MessageList from "@/components/LisaChat/chat/MessageList.vue";
 import MessageInput from "@/components/LisaChat/chat/MessageInput.vue";
+import ToastNotification from "@/components/shared/ToastNotification.vue";
+import { useToast } from "@/composables/useToast";
+import { onMounted } from "vue";
 import api from "@/services";
 
 interface MessageData {
@@ -107,20 +98,20 @@ interface MessageData {
 
 const isSidebarOpen = ref(window.innerWidth >= 768);
 const messageList = ref<InstanceType<typeof MessageList> | null>(null);
-const toasts = ref<Array<{ id: number; type: 'success' | 'error'; message: string }>>([]);
+const toastInstance = ref<InstanceType<typeof ToastNotification> | null>(null);
 const showWelcome = ref(true);
+const { setToastInstance, showSuccess, showError } = useToast();
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-  const id = Date.now();
-  toasts.value.push({ id, type, message });
-  setTimeout(() => {
-    toasts.value = toasts.value.filter(t => t.id !== id);
-  }, 3000);
-};
+// Initialize toast system
+onMounted(() => {
+  if (toastInstance.value) {
+    setToastInstance(toastInstance.value);
+  }
+});
 
 const handleMessage = async (messageData: MessageData) => {
   try {
@@ -129,20 +120,20 @@ const handleMessage = async (messageData: MessageData) => {
       await messageList.value.handleNewMessage(messageData);
       
       if (messageData.type === 'files') {
-        showToast('Files uploaded and processed successfully');
+        showSuccess('Files uploaded and processed successfully');
       }
     }
   } catch (err) {
     const error = err as Error;
     console.error('Error handling message:', error);
-    showToast(error.message || 'An error occurred while processing your request', 'error');
+    showError('Processing Failed', error.message || 'An error occurred while processing your request');
   }
 };
 
 // Check API status on component mount
 api.getStatus()
-  .then(() => showToast('Connected to API successfully'))
-  .catch((err: Error) => showToast('', 'error'));
+  .then(() => showSuccess('Connected to API successfully'))
+  .catch((err: Error) => showError('Connection Failed', 'Unable to connect to API'));
 </script>
 
 <style scoped>

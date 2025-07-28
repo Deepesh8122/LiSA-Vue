@@ -1,4 +1,6 @@
 import axios from 'axios';
+import sessionManager from './sessionManager';
+import responseParser, { ParsedApiResponse } from './responseParser';
 
 export interface ApiResponse<T = any> {
   data: T;
@@ -14,6 +16,12 @@ export interface AskResponse {
 export interface StatusResponse {
   status: string;
   message: string;
+}
+
+// Enhanced response interface for new API structure
+export interface EnhancedApiResponse extends ApiResponse {
+  parsedData?: ParsedApiResponse;
+  sessionId?: string;
 }
 
 const getBaseUrl = () => {
@@ -158,8 +166,69 @@ const api = {
     }
   },
 
-  // New method for the chat query endpoint
-  async chatQuery(message: string): Promise<ApiResponse<AskResponse>> {
+  // Enhanced chat query method with session management and response parsing
+  async chatQuery(message: string): Promise<EnhancedApiResponse> {
+    try {
+      // Get current session ID
+      const sessionId = sessionManager.getSessionId();
+      
+      // Make API request with session_id
+      const response = await axios.post('http://109.228.57.128:8080/chat/query', {
+        message: message,
+        session_id: sessionId
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${HF_BEARER_TOKEN}`
+        },
+        timeout: 100000,
+      });
+
+      // Validate response structure
+      if (!responseParser.isValidResponse(response.data)) {
+        console.warn('Invalid response structure:', response.data);
+        // Fall back to basic response handling
+        return {
+          data: response.data.response || response.data.answer || response.data,
+          status: response.status,
+          sessionId: sessionId
+        };
+      }
+
+      // Parse structured response
+      const parsedData = responseParser.parseResponse(response.data);
+      
+      // Update session
+      sessionManager.incrementMessageCount();
+
+      // Return enhanced response
+      return {
+        data: response.data,
+        status: response.status,
+        parsedData: parsedData,
+        sessionId: sessionId
+      };
+
+    } catch (error: any) {
+      console.error('Chat query error:', error);
+      
+      // Provide better error messages
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out - the server may be busy. Please try again.');
+      } else if (error.response?.status === 401) {
+        throw new Error('Authentication failed - please check your credentials.');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error - please try again in a moment.');
+      } else if (error.response?.status >= 400) {
+        throw new Error('Bad request - please check your message and try again.');
+      } else {
+        throw new Error(`Request failed: ${error.message || 'Unknown error'}`);
+      }
+    }
+  },
+
+  // Legacy chat query method for backward compatibility
+  async chatQueryLegacy(message: string): Promise<ApiResponse<AskResponse>> {
     return axios.post('http://109.228.57.128:8080/chat/query', {
       message: message
     }, {
