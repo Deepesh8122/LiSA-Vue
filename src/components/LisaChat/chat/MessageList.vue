@@ -51,6 +51,35 @@
       <div class="flex-1">
         <!-- Text Message -->
         <div v-if="message.type === 'text'">
+          <!-- Display structured translation results if available -->
+          <div v-if="message.translations && message.translations.length > 0" class="space-y-4 mb-4">
+            <TranslationResult 
+              v-for="(translation, index) in message.translations" 
+              :key="`translation-${message.id}-${index}`"
+              :translation="translation"
+              :expanded="false"
+            />
+          </div>
+
+          <!-- Display structured summary results if available -->
+          <div v-if="message.summaries && message.summaries.length > 0" class="space-y-4 mb-4">
+            <DocumentSummary 
+              v-for="(summary, index) in message.summaries" 
+              :key="`summary-${message.id}-${index}`"
+              :summary="summary"
+              :expanded="false"
+            />
+          </div>
+
+          <!-- Display source references if available -->
+          <div v-if="message.sources && message.sources.length > 0" class="mb-4">
+            <SourceReferences 
+              :sources="message.sources"
+              :expanded="false"
+            />
+          </div>
+
+          <!-- Display regular markdown content -->
           <MarkdownRenderer :content="message.content" />
         </div>
 
@@ -100,20 +129,10 @@ import LiSAIcon from '@/components/icons/LiSAIcon.vue'
 import FileIcon from '@/components/icons/FileIcon.vue'
 import DownloadIcon from '@/components/icons/DownloadIcon.vue'
 import MarkdownRenderer from '@/components/LisaChat/chat/MarkdownRenderer.vue'
-
-interface Message {
-  id: number;
-  sender: 'user' | 'ai';
-  type: 'text' | 'image' | 'code' | 'file' | 'files' | 'error' | 'loading';
-  content: string;
-  timestamp: Date;
-  alt?: string;
-  fileName?: string;
-  fileSize?: number;
-  files?: File[];
-  response?: any;
-  error?: string;
-}
+import TranslationResult from '@/components/LisaChat/chat/TranslationResult.vue'
+import DocumentSummary from '@/components/LisaChat/chat/DocumentSummary.vue'
+import SourceReferences from '@/components/LisaChat/chat/SourceReferences.vue'
+import type { Message } from '@/components/types'
 
 const chatContainer = ref<HTMLElement | null>(null)
 const messages = ref<Message[]>([])
@@ -166,14 +185,23 @@ const handleNewMessage = async (messageData: any) => {
       // Remove loading message
       removeLoadingMessage()
       
-      // Add AI response
-      messages.value.push({
+      // Create enhanced message with structured data
+      const enhancedMessage: Message = {
         id: ++messageCounter,
         sender: 'ai',
         type: 'text',
         content: messageData.response,
-        timestamp: new Date()
-      })
+        timestamp: new Date(),
+        parsedResponse: messageData.parsedResponse,
+        sessionId: messageData.sessionId,
+        sources: messageData.sources,
+        functionCalls: messageData.functionCalls,
+        translations: messageData.translations,
+        summaries: messageData.summaries,
+        isStructuredResponse: messageData.isStructuredResponse
+      }
+      
+      messages.value.push(enhancedMessage)
       return
     }
   }

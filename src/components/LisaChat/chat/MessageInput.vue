@@ -521,7 +521,7 @@ const sendMessage = async () => {
           })
         }, 15000)
         
-        // Use the new chatQuery method instead of askQuestion
+        // Use the enhanced chatQuery method with session management
         const response = await api.chatQuery(currentMessage)
         
         // Clear timeout warning
@@ -531,13 +531,32 @@ const sendMessage = async () => {
         }
         timeoutWarning.value = false
         
-        // Emit the response
-        emit('message-sent', {
-          type: 'text',
-          content: currentMessage,
-          response: response.data.response || response.data.answer || response.data,
-          isLoading: false
-        })
+        // Handle enhanced response with structured data
+        if (response.parsedData) {
+          // Send structured response
+          emit('message-sent', {
+            type: 'text',
+            content: currentMessage,
+            response: response.data.response || response.data.answer || response.data,
+            parsedResponse: response.parsedData,
+            sessionId: response.sessionId,
+            sources: response.parsedData.sources,
+            functionCalls: response.parsedData.functionCalls,
+            translations: response.parsedData.translations,
+            summaries: response.parsedData.summaries,
+            isStructuredResponse: response.parsedData.hasFunctionCalls,
+            isLoading: false
+          })
+        } else {
+          // Fallback to simple response
+          emit('message-sent', {
+            type: 'text',
+            content: currentMessage,
+            response: response.data.response || response.data.answer || response.data,
+            sessionId: response.sessionId,
+            isLoading: false
+          })
+        }
         
       } catch (error) {
         console.error('Error sending chat message:', error)
