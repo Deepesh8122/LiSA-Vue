@@ -1,4 +1,6 @@
 RewriteEngine On
+
+# Only run this rule if HTTPS is on and the domain is lisa.ha1ltd.com
 RewriteCond %{HTTPS} on
 RewriteCond %{HTTP_HOST} ^lisa\.ha1ltd\.com$ [NC]
-RewriteRule ^(.*)$ http://%{HTTP_HOST}%{REQUEST_URI} [L,R=302]
+RewriteRule ^(.*)$ http://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

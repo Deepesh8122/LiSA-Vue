@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
       vueDevTools(),
       tailwindcss()
     ],
+    devServer: {
+      https: false
+    },
     base: env.VITE_BASE_URL || '/lisa/',
     build: {
       outDir: 'dist',
