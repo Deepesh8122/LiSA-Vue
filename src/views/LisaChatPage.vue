@@ -77,7 +77,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import SidebarHeader from "@/components/LisaChat/sidebar/SidebarHeader.vue";
 import ConversationList from "@/components/LisaChat/sidebar/ConversationList.vue";
 import UserProfile from "@/components/LisaChat/sidebar/UserProfile.vue";
@@ -86,7 +87,6 @@ import MessageList from "@/components/LisaChat/chat/MessageList.vue";
 import MessageInput from "@/components/LisaChat/chat/MessageInput.vue";
 import ToastNotification from "@/components/shared/ToastNotification.vue";
 import { useToast } from "@/composables/useToast";
-import { onMounted } from "vue";
 import api from "@/services";
 
 interface MessageData {
@@ -100,6 +100,8 @@ const isSidebarOpen = ref(window.innerWidth >= 768);
 const messageList = ref<InstanceType<typeof MessageList> | null>(null);
 const toastInstance = ref<InstanceType<typeof ToastNotification> | null>(null);
 const showWelcome = ref(true);
+const route = useRoute();
+const router = useRouter();
 const { setToastInstance, showSuccess, showError } = useToast();
 
 const toggleSidebar = () => {
@@ -129,6 +131,88 @@ const handleMessage = async (messageData: MessageData) => {
     showError('Processing Failed', error.message || 'An error occurred while processing your request');
   }
 };
+
+// Handle new chat creation
+const initializeNewChat = async () => {
+  try {
+    const response = await api.createNewSession();
+    if (response.data?.session_id) {
+      // Clear existing messages
+      if (messageList.value?.setMessages) {
+        messageList.value.setMessages([]);
+      }
+
+      // Send welcome message
+      const welcomeMessage = 'Hi Lisa, let\'s start a new conversation';
+      await api.sendMessage(welcomeMessage, response.data.session_id);
+
+      // Update URL with session ID
+      await router.replace(`/chat/${response.data.session_id}`);
+
+      // Load initial message
+      const history = await api.getSessionMessages(response.data.session_id);
+      if (messageList.value?.setMessages) {
+        messageList.value.setMessages(history.data);
+      }
+
+      // Refresh conversation list
+      await refreshConversationList();
+    }
+  } catch (err) {
+    showError('Error', 'Failed to create new chat session');
+  }
+};
+
+const refreshConversationList = async () => {
+  try {
+    const response = await api.getSessions();
+    // Update conversation list component
+    // You'll need to implement this based on your UI structure
+  } catch (err) {
+    console.error('Failed to refresh conversations:', err);
+  }
+};
+
+// Update watch handler for route changes
+watch(
+  () => route.path,
+  async (newPath) => {
+    if (newPath === '/chat/new') {
+      // Clear messages when on new chat page
+      if (messageList.value?.setMessages) {
+        messageList.value.setMessages([]);
+      }
+    }
+  }
+);
+
+// Update sessionId watcher with better error handling
+watch(() => route.params.sessionId, async (newSessionId, oldSessionId) => {
+  if (messageList.value) {
+    if (newSessionId === 'new' || !newSessionId) {
+      // Clear messages for new chat
+      messageList.value.setMessages([]);
+      sessionManager.clearSession();
+    } else if (newSessionId !== oldSessionId) {
+      try {
+        loading.value = true;
+        // Load chat history for existing session
+        const history = await api.getChatHistory(newSessionId as string);
+        messageList.value.setMessages(history.data || []);
+        sessionManager.setSessionId(newSessionId as string);
+      } catch (err) {
+        showError('Error', 'Failed to load chat history');
+        // Fallback to new chat on error
+        router.replace('/chat/new');
+      } finally {
+        loading.value = false;
+      }
+    }
+  }
+}, { immediate: true });
+
+// Add loading state
+const loading = ref(false);
 
 // Check API status on component mount
 api.getStatus()

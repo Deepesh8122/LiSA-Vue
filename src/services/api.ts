@@ -1,5 +1,5 @@
 import axios from 'axios';
-import sessionManager from './sessionManager';
+import { sessionManager } from './sessionManager';
 import responseParser, { ParsedApiResponse } from './responseParser';
 
 export interface ApiResponse<T = any> {
@@ -61,6 +61,7 @@ apiClient.interceptors.request.use(
 );
 
 const HF_BEARER_TOKEN = import.meta.env.VITE_HF_TOKEN;
+const API_BASE_URL = 'http://109.228.57.128:8080';
 
 const api = {
   // Legacy method - keeping for backward compatibility
@@ -79,7 +80,7 @@ const api = {
     const formData = new FormData();
     formData.append('file', file);
 
-    return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+    return axios.post(`${API_BASE_URL}/documents/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Bearer ${HF_BEARER_TOKEN}`
@@ -99,7 +100,7 @@ const api = {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
 
-    return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+    return axios.post(`${API_BASE_URL}/documents/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Bearer ${HF_BEARER_TOKEN}`
@@ -114,7 +115,7 @@ const api = {
       const formData = new FormData();
       files.forEach(file => formData.append('files', file));
 
-      const result = await axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+      const result = await axios.post(`${API_BASE_URL}/documents/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${HF_BEARER_TOKEN}`
@@ -166,16 +167,16 @@ const api = {
     }
   },
 
-  // Enhanced chat query method with session management and response parsing
-  async chatQuery(message: string): Promise<EnhancedApiResponse> {
+  // Enhanced chat query method with optional sessionId
+  async chatQuery(message: string, sessionId?: string): Promise<EnhancedApiResponse> {
     try {
-      // Get current session ID
-      const sessionId = sessionManager.getSessionId();
+      // Use provided sessionId or get from manager
+      const currentSessionId = sessionId || sessionManager.getSessionId();
       
-      // Make API request with session_id
-      const response = await axios.post('http://109.228.57.128:8080/chat/query', {
+      const response = await axios.post(`${API_BASE_URL}/chat/query`, {
         message: message,
-        session_id: sessionId
+        session_id: currentSessionId,
+        new_session: !currentSessionId // Request new session if no ID provided
       }, {
         headers: {
           'Content-Type': 'application/json',
@@ -184,6 +185,11 @@ const api = {
         timeout: 100000,
       });
 
+      // Update session manager with new ID if provided
+      if (response.data?.session_id) {
+        sessionManager.setSessionId(response.data.session_id);
+      }
+
       // Validate response structure
       if (!responseParser.isValidResponse(response.data)) {
         console.warn('Invalid response structure:', response.data);
@@ -191,7 +197,7 @@ const api = {
         return {
           data: response.data.response || response.data.answer || response.data,
           status: response.status,
-          sessionId: sessionId
+          sessionId: currentSessionId
         };
       }
 
@@ -206,7 +212,7 @@ const api = {
         data: response.data,
         status: response.status,
         parsedData: parsedData,
-        sessionId: sessionId
+        sessionId: currentSessionId
       };
 
     } catch (error: any) {
@@ -229,7 +235,7 @@ const api = {
 
   // Legacy chat query method for backward compatibility
   async chatQueryLegacy(message: string): Promise<ApiResponse<AskResponse>> {
-    return axios.post('http://109.228.57.128:8080/chat/query', {
+    return axios.post(`${API_BASE_URL}/chat/query`, {
       message: message
     }, {
       headers: {
@@ -327,6 +333,55 @@ const api = {
       });
       throw error;
     }
+  },
+
+  // Chat Session Management
+  async getChatSessions(): Promise<ApiResponse> {
+    return axios.get(`${API_BASE_URL}/chat/sessions`, {
+      headers: {
+        'Authorization': `Bearer ${HF_BEARER_TOKEN}`
+      }
+    });
+  },
+
+  async getChatHistory(sessionId: string): Promise<ApiResponse> {
+    return axios.get(`${API_BASE_URL}/chat/history/${sessionId}`, {
+      headers: {
+        'Authorization': `Bearer ${HF_BEARER_TOKEN}`
+      }
+    });
+  },
+
+  async createNewSession(): Promise<ApiResponse> {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/chat/query`, {
+        message: "",
+        new_session: true
+      }, {
+        headers: {
+          'Authorization': `Bearer ${HF_BEARER_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Set session ID in manager only if we get one
+      if (response.data?.session_id) {
+        sessionManager.setSessionId(response.data.session_id);
+      }
+
+      return response;
+    } catch (error: any) {
+      console.error('Failed to create session:', error);
+      throw new Error(error.response?.data?.message || 'Failed to create chat session');
+    }
+  },
+
+  async deleteSession(sessionId: string): Promise<ApiResponse> {
+    return axios.delete(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+      headers: {
+        'Authorization': `Bearer ${HF_BEARER_TOKEN}`
+      }
+    });
   }
 };
 

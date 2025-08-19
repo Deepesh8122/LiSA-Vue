@@ -91,7 +91,7 @@ defineProps<{
   conversations: Conversation[];
 }>()
 
-defineEmits(['hover', 'refresh', 'show-history'])
+defineEmits(['hover'])
 
 const isCollapsed = ref(false)
 const activeDropdown = ref<number | null>(null)
@@ -127,18 +127,16 @@ const handleConversationClick = (conversation: Conversation) => {
   router.push(`/chat/${conversation.id}`)
 }
 
-const handleAction = async (action: string, conversation: Conversation) => {
-  try {
-    if (action === 'delete') {
-      await api.deleteSession(conversation.id);
-      emit('refresh');
-    } else if (action === 'history') {
-      const history = await api.getChatHistory(conversation.id);
-      emit('show-history', history.data);
-    }
-  } catch (error) {
-    console.error(`Failed to ${action} conversation:`, error);
+const handleAction = (action: string, conversation: Conversation) => {
+  if (action === 'history') {
+    // Replace this with your modal logic
+    window.parent.postMessage({ type: 'SHOW_HISTORY_MODAL', payload: conversation }, '*')
+  } else if (action === 'edit') {
+    handleConversationClick(conversation)
   }
+
+  activeDropdown.value = null
+  activeConversation.value = null
 }
 
 
@@ -164,8 +162,6 @@ onUnmounted(() => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
   overflow: hidden;
   text-overflow: ellipsis;
 }

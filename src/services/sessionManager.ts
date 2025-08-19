@@ -14,71 +14,48 @@ export interface ChatSession {
 }
 
 class SessionManager {
-  private currentSession: ChatSession | null = null
+  private currentSessionId: string | null = null
+  private messageCount: number = 0
 
   /**
-   * Get or create the current chat session
+   * Set the current session ID
    */
-  getCurrentSession(): ChatSession {
-    if (this.currentSession && !this.isSessionExpired(this.currentSession)) {
-      // Update last used time
-      this.currentSession.lastUsed = Date.now()
-      this.saveSession(this.currentSession)
-      return this.currentSession
-    }
-
-    // Load from storage or create new
-    const stored = this.loadStoredSession()
-    if (stored && !this.isSessionExpired(stored)) {
-      this.currentSession = stored
-      this.currentSession.lastUsed = Date.now()
-      this.saveSession(this.currentSession)
-      return this.currentSession
-    }
-
-    // Create new session
-    return this.createNewSession()
+  setSessionId(sessionId: string): void {
+    this.currentSessionId = sessionId
+    localStorage.setItem('currentSessionId', sessionId)
   }
 
   /**
    * Get the current session ID for API calls
    */
-  getSessionId(): string {
-    return this.getCurrentSession().id
-  }
-
-  /**
-   * Create a new chat session
-   */
-  createNewSession(): ChatSession {
-    const session: ChatSession = {
-      id: this.generateSessionId(),
-      createdAt: Date.now(),
-      lastUsed: Date.now(),
-      messageCount: 0
+  getSessionId(): string | null {
+    if (!this.currentSessionId) {
+      this.currentSessionId = localStorage.getItem('currentSessionId')
     }
-
-    this.currentSession = session
-    this.saveSession(session)
-    return session
+    return this.currentSessionId
   }
 
   /**
    * Increment message count for current session
    */
   incrementMessageCount(): void {
-    const session = this.getCurrentSession()
-    session.messageCount++
-    session.lastUsed = Date.now()
-    this.saveSession(session)
+    this.messageCount++
+  }
+
+  /**
+   * Get the current message count
+   */
+  getMessageCount(): number {
+    return this.messageCount
   }
 
   /**
    * Clear current session (force new session on next call)
    */
   clearSession(): void {
-    this.currentSession = null
-    this.removeStoredSession()
+    this.currentSessionId = null
+    this.messageCount = 0
+    localStorage.removeItem('currentSessionId')
   }
 
   /**
@@ -139,6 +116,23 @@ class SessionManager {
   }
 
   /**
+   * Get or create the current session
+   */
+  private getCurrentSession(): ChatSession {
+    const stored = this.loadStoredSession()
+    if (stored && !this.isSessionExpired(stored)) {
+      return stored
+    }
+    
+    return {
+      id: this.generateSessionId(),
+      createdAt: Date.now(),
+      lastUsed: Date.now(),
+      messageCount: 0
+    }
+  }
+
+  /**
    * Load session from storage
    */
   private loadStoredSession(): ChatSession | null {
@@ -169,6 +163,7 @@ class SessionManager {
   }
 }
 
-// Export singleton instance
-export const sessionManager = new SessionManager()
-export default sessionManager
+// Create and export singleton instance
+const sessionManager = new SessionManager();
+export { sessionManager };
+export default sessionManager;

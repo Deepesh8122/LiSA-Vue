@@ -98,6 +98,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import MaterialIcon from '@/components/icons/MaterialIcon.vue'
+import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
 interface Model {
   id: number
@@ -126,6 +128,37 @@ const models: Model[] = [
     icon: 'lightbulb'
   }
 ]
+const router = useRouter()
+
+const createNewChat = async () => {
+  try {
+    // First clear current messages if MessageList is available
+    if (messageList.value?.setMessages) {
+      messageList.value.setMessages([]);
+    }
+
+    // Create new session first to get session ID
+    const response = await api.createNewSession();
+    if (response.data?.session_id) {
+      // Navigate to the new chat with session ID
+      await router.push(`/chat/${response.data.session_id}`);
+      
+      // Refresh conversation list
+      emit('refresh-conversations');
+    } else {
+      // If no session ID, just navigate to /chat/new
+      await router.push('/chat/new');
+    }
+  } catch (error) {
+    console.error('Failed to create new chat:', error);
+    // Fallback to /chat/new on error
+    await router.push('/chat/new');
+  }
+}
+
+// Add messageList ref
+const messageList = ref<InstanceType<typeof MessageList> | null>(null)
+
 const actions = computed(() => [
   {
     icon: props.isSidebarOpen ? 'menu' : 'dock_to_left',
@@ -137,14 +170,8 @@ const actions = computed(() => [
     icon: 'add',
     label: 'New Chat',
     class: 'flex bg-[#4318FF] text-white hover:bg-[#4318FF] px-2 pr-3',
-    onClick: () => console.log('Clear chat')
+    onClick: createNewChat
   },
-    // {
-  //   icon: 'add',
-  //   label: 'New chat',
-  //   class: 'bg-neutral-100 hover:bg-neutral-200',
-  //   onClick: () => console.log('New chat')
-  // },
 ])
 
 interface Props {
@@ -159,7 +186,7 @@ const isDropdownOpen = ref(false)
 const selectedModel = ref(models[0])
 
 const toggleDropdown = () => {
-  isDropdownOpen.value = !isDropdownOpen.value
+  isDropdownOpen.value = !isDropdown.value
 }
 
 const selectModel = (model: Model) => {

@@ -128,9 +128,9 @@ const handleSubmit = async (event: Event) => {
       localStorage.setItem('user-email', email.value);
     }
 
-    // Navigate to chat page
+    // Navigate to chat page with correct route name
     await router.push({ 
-      name: 'chat'
+      name: 'chat-home'  // Changed from 'chat' to 'chat-home'
     });
   } catch (error) {
     console.error('Navigation failed:', error);

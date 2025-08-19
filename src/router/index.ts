@@ -4,11 +4,11 @@ import LisaChatPage from '@/views/LisaChatPage.vue'
 import UserProfilePage from '@/views/UserProfilePage.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes: [
     {
       path: '/',
-      redirect: '/login'
+      redirect: '/chat/new'  // Changed to redirect to new chat
     },
     {
       path: '/login',
@@ -17,9 +17,17 @@ const router = createRouter({
     },
     {
       path: '/chat',
-      name: 'chat',
-      component: LisaChatPage,
-      meta: { requiresAuth: true }
+      redirect: '/chat/new'  // Added redirect
+    },
+    {
+      path: '/chat/new',
+      name: 'new-chat',
+      component: LisaChatPage
+    },
+    {
+      path: '/chat/:sessionId',
+      name: 'chat-session',
+      component: LisaChatPage
     },
     {
       path: '/user-profile',

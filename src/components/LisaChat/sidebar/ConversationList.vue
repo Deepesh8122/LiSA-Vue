@@ -9,6 +9,7 @@
         :title="section.title"
         :conversations="section.conversations"
         @hover="handleHover"
+        @click="handleConversationClick"
       />
 
       <div v-if="loading" class="text-gray-500 mt-4">Loading chat history...</div>
@@ -25,7 +26,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { useRouter } from 'vue-router'
+import api from '@/services/api'
 import SearchBar from './SearchBar.vue'
 import TimeSection from './TimeSection.vue'
 import ChatHistoryModal from './ChatHistoryModal.vue'
@@ -43,10 +45,9 @@ interface Section {
   conversations: Conversation[]
 }
 
+const router = useRouter()
 const sessionId = sessionManager.getSessionId()
 console.log('Current Session ID:', sessionId)
-
-const apiURL = `http://109.228.57.128:8080/chat/history/${sessionId}`
 
 const rawMessages = ref<any[]>([])
 const sections = ref<Section[]>([])
@@ -60,57 +61,36 @@ const hoveredMessages = ref<any[]>([])
 
 const fetchChatHistory = async () => {
   try {
-    const response = await axios.get(apiURL)
-    const data = response.data
-    rawMessages.value = data
+    const response = await api.getChatSessions();
+    const sessions = Array.isArray(response.data) ? response.data : [];
 
-    console.log('Chat History:', data)
-
+    // Transform sessions into conversations
     const grouped: { [key: string]: Conversation[] } = {
       'Today': [],
       'Previous 7 Days': [],
       'Previous 30 Days': []
-    }
+    };
 
-    const now = new Date()
-
-    const getSmartIcon = (item: any): string => {
-      if (item.role === 'user') return '🙋‍♂️'
-
-      const content = (item.content || '').toLowerCase()
-
-      if (content.includes('weather')) return '🌦️'
-      if (content.includes('news')) return '📰'
-      if (content.includes('calendar') || content.includes('meeting')) return '📅'
-      if (content.includes('email')) return '✉️'
-      if (content.includes('reminder')) return '⏰'
-      if (content.includes('joke')) return '😂'
-      if (content.includes('code') || content.includes('function')) return '💻'
-      if (content.includes('travel') || content.includes('flight')) return '✈️'
-
-      return '🤖'
-    }
-
-    data.forEach((item: any) => {
-      const date = new Date(item.timestamp)
-      const diffDays = Math.floor((+now - +date) / (1000 * 60 * 60 * 24))
+    sessions.forEach((session: any) => {
+      const date = new Date(session.last_activity || session.created_at);
+      const diffDays = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
 
       const conversation: Conversation = {
-        id: +new Date(item.timestamp), // Use timestamp for sorting
-        title: item.content || '(No Content)',
-        icon: getSmartIcon(item),
+        id: session.session_id,
+        title: `Chat ${session.message_count} messages`,
+        icon: '💬',
         isDropDown: true
-      }
+      };
 
-      if (diffDays === 0) grouped['Today'].push(conversation)
-      else if (diffDays <= 7) grouped['Previous 7 Days'].push(conversation)
-      else grouped['Previous 30 Days'].push(conversation)
-    })
+      if (diffDays === 0) grouped['Today'].push(conversation);
+      else if (diffDays <= 7) grouped['Previous 7 Days'].push(conversation);
+      else grouped['Previous 30 Days'].push(conversation);
+    });
 
-    // Sort each group by descending timestamp
-    Object.keys(grouped).forEach(group => {
-      grouped[group].sort((a, b) => b.id - a.id)
-    })
+    // Sort conversations by last activity
+    Object.values(grouped).forEach(group => {
+      group.sort((a, b) => b.id.localeCompare(a.id));
+    });
 
     const orderedTitles = ['Today', 'Previous 7 Days', 'Previous 30 Days']
     sections.value = orderedTitles
@@ -120,11 +100,11 @@ const fetchChatHistory = async () => {
       }))
       .filter(section => section.conversations.length > 0)
 
-  } catch (err) {
-    console.error(err)
-    error.value = 'Session not found.'
+  } catch (error) {
+    console.error('Failed to load chat sessions:', error);
+    error.value = 'Failed to load chat history';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
@@ -155,5 +135,28 @@ const closeModal = () => {
   hoveredMessages.value = []
 }
 
-onMounted(fetchChatHistory)
+const handleConversationClick = async (conversation: Conversation) => {
+  try {
+    // Load chat history
+    const history = await api.getChatHistory(conversation.id);
+    
+    // Update messages in MessageList
+    messageList.value?.setMessages(history.data);
+    
+    // Update URL
+    router.push(`/chat/${conversation.id}`);
+  } catch (error) {
+    console.error('Failed to load chat history:', error);
+  }
+};
+
+// Fetch chat sessions on mount
+onMounted(async () => {
+  try {
+    const response = await api.getChatSessions();
+    sections.value = transformSessions(response.data);
+  } catch (error) {
+    console.error('Failed to load chat sessions:', error);
+  }
+});
 </script>
