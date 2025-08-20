@@ -41,7 +41,7 @@
       ]"
     >
       <SidebarHeader @toggle-sidebar="toggleSidebar"/>
-      <ConversationList />
+      <ConversationList @showSessionHistory="handleShowHistory" />
       <UserProfile />
     </div>
 
@@ -73,11 +73,70 @@
 
     <!-- Enhanced Toast Notifications -->
     <ToastNotification ref="toastInstance" />
+
+    <!-- Session History Modal -->
+    <transition name="fade">
+      <div v-if="showSessionHistory" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+          <!-- Backdrop -->
+          <div class="fixed inset-0 bg-black/50" @click="closeSessionHistory"></div>
+          
+          <!-- Modal -->
+          <div class="relative bg-white w-full max-w-4xl rounded-xl shadow-xl max-h-[90vh] overflow-hidden">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-[#4318FF]">
+              <h3 class="text-xl font-semibold text-white">Chat History</h3>
+              <button @click="closeSessionHistory" class="text-white hover:text-gray-200">
+                <MaterialIcon name="close" size="text-xl" />
+              </button>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div v-if="sessionMessages.loading" class="text-center py-4">
+                Loading chat history...
+              </div>
+              <div v-else-if="sessionMessages.error" class="text-red-500 text-center py-4">
+                {{ sessionMessages.error }}
+              </div>
+              <div v-else class="space-y-4">
+                <div v-for="message in sessionMessages.data" 
+                     :key="message.id" 
+                     class="p-4 rounded-lg" 
+                     :class="message.role === 'user' ? 'bg-gray-100' : 'bg-blue-50'">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0">
+                      <div v-if="message.role === 'user'" 
+                           class="w-8 h-8 rounded-full bg-[#4318FF] flex items-center justify-center">
+                        <MaterialIcon name="person" size="text-base" color="text-white" />
+                      </div>
+                      <div v-else class="w-8 h-8">
+                        <!-- LiSA Icon -->
+                        <LiSAIcon />
+                      </div>
+                    </div>
+                    <div class="flex-1">
+                      <div class="font-medium mb-1">
+                        {{ message.role === 'user' ? 'You' : 'LiSA' }}
+                      </div>
+                      <div>{{ message.content }}</div>
+                      <div class="text-xs text-gray-500 mt-2">
+                        {{ new Date(message.timestamp).toLocaleString() }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import SidebarHeader from "@/components/LisaChat/sidebar/SidebarHeader.vue";
 import ConversationList from "@/components/LisaChat/sidebar/ConversationList.vue";
 import UserProfile from "@/components/LisaChat/sidebar/UserProfile.vue";
@@ -86,7 +145,6 @@ import MessageList from "@/components/LisaChat/chat/MessageList.vue";
 import MessageInput from "@/components/LisaChat/chat/MessageInput.vue";
 import ToastNotification from "@/components/shared/ToastNotification.vue";
 import { useToast } from "@/composables/useToast";
-import { onMounted } from "vue";
 import api from "@/services";
 
 interface MessageData {
@@ -100,6 +158,13 @@ const isSidebarOpen = ref(window.innerWidth >= 768);
 const messageList = ref<InstanceType<typeof MessageList> | null>(null);
 const toastInstance = ref<InstanceType<typeof ToastNotification> | null>(null);
 const showWelcome = ref(true);
+const showSessionHistory = ref(false);
+const selectedSessionId = ref('');
+const sessionMessages = ref({
+  loading: false,
+  error: '',
+  data: []
+});
 const { setToastInstance, showSuccess, showError } = useToast();
 
 const toggleSidebar = () => {
@@ -134,6 +199,47 @@ const handleMessage = async (messageData: MessageData) => {
 api.getStatus()
   .then(() => showSuccess('Connected to API successfully'))
   .catch((err: Error) => showError('Connection Failed', 'Unable to connect to API'));
+
+const handleShowHistory = async (sessionId: string) => {
+  console.log('Opening history for session:', sessionId);
+  selectedSessionId.value = sessionId;
+  showSessionHistory.value = true;
+  await fetchSessionHistory(sessionId);
+};
+
+const fetchSessionHistory = async (sessionId: string) => {
+  sessionMessages.value.loading = true;
+  sessionMessages.value.error = '';
+  
+  try {
+    if (!sessionId) {
+      throw new Error('No session ID provided');
+    }
+
+    console.log('Fetching history for session:', sessionId);
+    const { data } = await api.getChatHistory(sessionId);
+    
+    // Transform messages
+    sessionMessages.value.data = data.map((msg: any) => ({
+      ...msg,
+      timestamp: new Date(msg.timestamp || msg.created_at)
+    }));
+
+    console.log('Processed messages:', sessionMessages.value.data);
+  } catch (error: any) {
+    console.error('Error fetching session history:', error);
+    sessionMessages.value.error = error.message || 'Failed to load chat history';
+    showError('Chat History Error', error.message || 'Failed to load chat history');
+  } finally {
+    sessionMessages.value.loading = false;
+  }
+};
+
+const closeSessionHistory = () => {
+  showSessionHistory.value = false;
+  selectedSessionId.value = '';
+  sessionMessages.value.data = [];
+};
 </script>
 
 <style scoped>
@@ -155,4 +261,5 @@ api.getStatus()
 .transition-all {
   will-change: margin-left, transform;
 }
+
 </style>

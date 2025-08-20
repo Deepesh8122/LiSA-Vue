@@ -8,6 +8,7 @@
         :key="index"
         :title="section.title"
         :conversations="section.conversations"
+        @select="handleSessionSelect"
         @hover="handleHover"
       />
 
@@ -30,18 +31,31 @@ import SearchBar from './SearchBar.vue'
 import TimeSection from './TimeSection.vue'
 import ChatHistoryModal from './ChatHistoryModal.vue'
 import sessionManager from '@/services/sessionManager'
+import api from '@/services/api'
 
 interface Conversation {
-  id: number
+  id: string | number
   title: string
   icon: string
   isDropDown?: boolean
+  timestamp: Date
+  messageCount: number
+  lastMessage: string
 }
 
 interface Section {
   title: string
   conversations: Conversation[]
 }
+
+interface SessionResponse {
+  session_id: string;
+  created_at: string;
+  last_activity: string;
+  message_count: number;
+}
+
+const emit = defineEmits(['showSessionHistory'])
 
 const sessionId = sessionManager.getSessionId()
 console.log('Current Session ID:', sessionId)
@@ -58,62 +72,48 @@ const searchTerm = ref('')
 const showModal = ref(false)
 const hoveredMessages = ref<any[]>([])
 
+// Fetch chat history from the API
 const fetchChatHistory = async () => {
   try {
-    const response = await axios.get(apiURL)
-    const data = response.data
-    rawMessages.value = data
-
-    console.log('Chat History:', data)
+    loading.value = true;
+    const response = await api.getChatSessions();
+    const sessions = response.data as SessionResponse[];
+    console.log('All Sessions:', sessions);
 
     const grouped: { [key: string]: Conversation[] } = {
       'Today': [],
       'Previous 7 Days': [],
       'Previous 30 Days': []
-    }
+    };
 
-    const now = new Date()
+    const now = new Date();
 
-    const getSmartIcon = (item: any): string => {
-      if (item.role === 'user') return '🙋‍♂️'
-
-      const content = (item.content || '').toLowerCase()
-
-      if (content.includes('weather')) return '🌦️'
-      if (content.includes('news')) return '📰'
-      if (content.includes('calendar') || content.includes('meeting')) return '📅'
-      if (content.includes('email')) return '✉️'
-      if (content.includes('reminder')) return '⏰'
-      if (content.includes('joke')) return '😂'
-      if (content.includes('code') || content.includes('function')) return '💻'
-      if (content.includes('travel') || content.includes('flight')) return '✈️'
-
-      return '🤖'
-    }
-
-    data.forEach((item: any) => {
-      const date = new Date(item.timestamp)
-      const diffDays = Math.floor((+now - +date) / (1000 * 60 * 60 * 24))
+    sessions.forEach((session) => {
+      const date = new Date(session.created_at);
+      const diffDays = Math.floor((+now - +date) / (1000 * 60 * 60 * 24));
 
       const conversation: Conversation = {
-        id: +new Date(item.timestamp), // Use timestamp for sorting
-        title: item.content || '(No Content)',
-        icon: getSmartIcon(item),
-        isDropDown: true
-      }
+        id: session.session_id,
+        title: `Chat Session ${session.session_id.substr(-6)}`,
+        icon: '💬',
+        isDropDown: true,
+        timestamp: date,
+        messageCount: session.message_count,
+        lastMessage: new Date(session.last_activity).toLocaleString()
+      };
 
-      if (diffDays === 0) grouped['Today'].push(conversation)
-      else if (diffDays <= 7) grouped['Previous 7 Days'].push(conversation)
-      else grouped['Previous 30 Days'].push(conversation)
-    })
+      if (diffDays === 0) grouped['Today'].push(conversation);
+      else if (diffDays <= 7) grouped['Previous 7 Days'].push(conversation);
+      else grouped['Previous 30 Days'].push(conversation);
+    });
 
-    // Sort each group by descending timestamp
+    // Sort each group by timestamp
     Object.keys(grouped).forEach(group => {
-      grouped[group].sort((a, b) => b.id - a.id)
+      grouped[group].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     })
 
-    const orderedTitles = ['Today', 'Previous 7 Days', 'Previous 30 Days']
-    sections.value = orderedTitles
+    // Update sections
+    sections.value = ['Today', 'Previous 7 Days', 'Previous 30 Days']
       .map(title => ({
         title,
         conversations: grouped[title] || []
@@ -121,17 +121,19 @@ const fetchChatHistory = async () => {
       .filter(section => section.conversations.length > 0)
 
   } catch (err) {
-    console.error(err)
-    error.value = 'Session not found.'
+    console.error('Error fetching sessions:', err)
+    error.value = 'Failed to load chat sessions'
   } finally {
     loading.value = false
   }
 }
 
+// Filter conversations based on search term
 const filterConversations = (query: string) => {
   searchTerm.value = query.toLowerCase()
 }
 
+// Computed property to get filtered sections
 const filteredSections = computed(() => {
   if (!searchTerm.value) return sections.value
 
@@ -145,15 +147,24 @@ const filteredSections = computed(() => {
     .filter(section => section.conversations.length > 0)
 })
 
+// Handle hover event on conversation
 const handleHover = (msgContent: string) => {
   hoveredMessages.value = rawMessages.value.filter(m => m.content === msgContent)
   showModal.value = true
 }
 
+// Close the chat history modal
 const closeModal = () => {
   showModal.value = false
   hoveredMessages.value = []
 }
 
+// Add handleSessionSelect function
+const handleSessionSelect = (sessionId: string) => {
+  console.log('Session selected:', sessionId);
+  emit('showSessionHistory', sessionId);
+};
+
 onMounted(fetchChatHistory)
+
 </script>

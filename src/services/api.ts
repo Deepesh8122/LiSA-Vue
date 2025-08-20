@@ -327,6 +327,77 @@ const api = {
       });
       throw error;
     }
+  },
+
+  // Session Management Methods
+  async getChatSessions(): Promise<ApiResponse> {
+    try {
+      const response = await axios.get('http://109.228.57.128:8080/chat/sessions', {
+        headers: {
+          'Authorization': `Bearer ${HF_BEARER_TOKEN}`
+        }
+      });
+      return response;
+    } catch (error: any) {
+      console.error('Failed to fetch chat sessions:', error);
+      throw new Error(error.response?.data?.message || 'Failed to load chat sessions');
+    }
+  },
+
+  async getChatHistory(sessionId: string) {
+    try {
+      if (!sessionId) {
+        throw new Error('Session ID is required');
+      }
+
+      const response = await axios.get(`http://109.228.57.128:8080/chat/history/${sessionId}`, {
+        headers: {
+          'Authorization': `Bearer ${HF_BEARER_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Make sure we return the data in a consistent format
+      return {
+        data: Array.isArray(response.data) ? response.data : [],
+        status: response.status
+      };
+    } catch (error: any) {
+      console.error('Failed to fetch chat history:', error);
+      throw new Error(error.response?.data?.message || 'Failed to load chat history');
+    }
+  },
+
+  async createNewSession(): Promise<ApiResponse> {
+    try {
+      const response = await axios.post('http://109.228.57.128:8080/chat/query', {
+        message: "",
+        new_session: true
+      }, {
+        headers: {
+          'Authorization': `Bearer ${HF_BEARER_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Set session ID in manager
+      if (response.data?.session_id) {
+        sessionManager.setSessionId(response.data.session_id);
+      }
+
+      return response;
+    } catch (error: any) {
+      console.error('Failed to create session:', error);
+      throw new Error(error.response?.data?.message || 'Failed to create chat session');
+    }
+  },
+
+  async deleteSession(sessionId: string): Promise<ApiResponse> {
+    return axios.delete(`http://109.228.57.128:8080/chat/sessions/${sessionId}`, {
+      headers: {
+        'Authorization': `Bearer ${HF_BEARER_TOKEN}`
+      }
+    });
   }
 };
 

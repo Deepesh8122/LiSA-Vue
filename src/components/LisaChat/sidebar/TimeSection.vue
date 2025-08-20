@@ -20,26 +20,32 @@
     <!-- Conversation List -->
     <div v-show="!isCollapsed" class="space-y-1">
       <button
-          v-for="conversation in conversations"
-          :key="conversation.id"
-          @click="$emit('hover', conversation.title)" 
-          class="flex gap-3 items-center p-2 w-full rounded-lg transition-colors relative group"
-          :class="{'bg-stone-100': activeConversation === conversation.id, 'hover:bg-stone-100': activeConversation !== conversation.id}"
-        >
-        <!-- Icon or Letter -->
-        <div
-          v-if="conversation.icon && conversation.isDropDown"
-          class="p-1 text-md text-gray-400 bg-gray-200 h-8 w-8 flex items-center justify-center rounded-full bg-lisa-primary"
-        >
-          {{ conversation.icon }}
-        </div>
-        
-        <!-- Truncated Title -->
-        <div class="flex-1 text-sm text-zinc-800 text-left truncate-2-lines">
-          {{ conversation.title }}
-        </div>
-        
-        <!-- Dots Menu Trigger -->
+        v-for="conversation in conversations"
+        :key="conversation.id"
+        :id="conversation.id"
+        @click="handleSelect(conversation.id)" 
+        class="flex flex-col gap-1 p-3 w-full rounded-lg transition-colors relative group hover:bg-stone-100"
+        :class="{'bg-stone-100': activeConversation === conversation.id}"
+      >
+        <div class="flex flex-row gap-2">
+          <div class="d-flex flex-column">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">{{ conversation.icon }}</span>
+              <span class="flex-1 text-sm font-medium text-zinc-800 text-left truncate">
+                {{ conversation.title }}
+              </span>
+              <!-- <span class="text-xs text-gray-500">
+                {{ formatTime(conversation.timestamp) }}
+              </span> -->
+            </div>
+            
+            <div class="flex items-start gap-2 text-xs text-gray-500">
+              <!-- <span>{{ conversation.messageCount }} messages</span> -->
+              <span class="truncate">{{ conversation.lastMessage }}</span>
+            </div>
+          </div>
+          <div class="flex items-center ml-auto">
+            <!-- Dots Menu Trigger -->
         <div 
           v-if="conversation.isDropDown" 
           @click.stop="toggleDropdown(conversation.id)"
@@ -67,6 +73,10 @@
             {{ item.label }}
           </button>
         </div>
+          </div>
+        </div>
+        
+        
       </button>
     </div>
   </div>
@@ -90,7 +100,10 @@ defineProps<{
   conversations: Conversation[];
 }>()
 
-defineEmits(['hover'])
+const emit = defineEmits<{
+  (e: 'select', id: string): void;
+  (e: 'hover', content: string): void;
+}>();
 
 const isCollapsed = ref(false)
 const activeDropdown = ref<number | null>(null)
@@ -133,6 +146,27 @@ const handleAction = (action: string, conversation: Conversation) => {
   activeConversation.value = null
 }
 
+const handleSelect = (conversationId: string) => {
+  console.log('Selected conversation:', conversationId);
+  emit('select', conversationId);
+  // Close dropdown if open
+  activeDropdown.value = null;
+  activeConversation.value = null;
+};
+
+const formatTime = (date: Date) => {
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  
+  if (days === 0) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } else if (days < 7) {
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()]
+  } else {
+    return date.toLocaleDateString()
+  }
+}
 
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
