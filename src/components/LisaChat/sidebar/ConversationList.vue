@@ -8,28 +8,27 @@
         :key="index"
         :title="section.title"
         :conversations="section.conversations"
+        :current-session-id="currentSessionId"
         @select="handleSessionSelect"
-        @hover="handleHover"
+        @deleted="handleSessionDeleted"
+        @error="handleError"
       />
 
       <div v-if="loading" class="text-gray-500 mt-4">Loading chat history...</div>
       <div v-if="error" class="text-red-500 mt-4">{{ error }}</div>
     </div>
 
-    <ChatHistoryModal
-      :visible="showModal"
-      :messages="hoveredMessages"
-      @close="closeModal"
-    />
+
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import SearchBar from './SearchBar.vue'
 import TimeSection from './TimeSection.vue'
-import ChatHistoryModal from './ChatHistoryModal.vue'
 import sessionManager from '@/services/sessionManager'
 import api from '@/services/api'
 
@@ -55,22 +54,37 @@ interface SessionResponse {
   message_count: number;
 }
 
-const emit = defineEmits(['showSessionHistory'])
+const emit = defineEmits<{
+  (e: 'loadChatHistory', sessionId: string, history: any[]): void
+  (e: 'error', message: string): void
+}>();
 
-const sessionId = sessionManager.getSessionId()
-console.log('Current Session ID:', sessionId)
+const currentSessionId = ref(sessionManager.getSessionId())
+console.log('Current Session ID:', currentSessionId.value)
 
-const apiURL = `http://109.228.57.128:8080/chat/history/${sessionId}`
-
-const rawMessages = ref<any[]>([])
 const sections = ref<Section[]>([])
+
+// Update active session whenever it changes
+watch(currentSessionId, (newId) => {
+  console.log('Session ID changed:', newId);
+});
 const loading = ref(true)
 const error = ref('')
-const searchTerm = ref('')
 
-// Modal state
-const showModal = ref(false)
-const hoveredMessages = ref<any[]>([])
+// Handle session deletion
+const handleSessionDeleted = (sessionId: string) => {
+  sections.value = sections.value.map(section => ({
+    ...section,
+    conversations: section.conversations.filter(conv => conv.id !== sessionId)
+  })).filter(section => section.conversations.length > 0);
+};
+
+// Handle errors from child components
+const handleError = (message: string) => {
+  error.value = message;
+  emit('error', message);
+};
+const searchTerm = ref('')
 
 // Fetch chat history from the API
 const fetchChatHistory = async () => {
@@ -88,13 +102,15 @@ const fetchChatHistory = async () => {
 
     const now = new Date();
 
+    // First, sort sessions into groups without fetching messages
     sessions.forEach((session) => {
-      const date = new Date(session.created_at);
+      const date = new Date(session.last_activity);
       const diffDays = Math.floor((+now - +date) / (1000 * 60 * 60 * 24));
-
+      
+      // Create conversation with temporary title
       const conversation: Conversation = {
         id: session.session_id,
-        title: `Chat Session ${session.session_id.substr(-6)}`,
+        title: `Chat ${session.session_id.substr(-6)}`,
         icon: '💬',
         isDropDown: true,
         timestamp: date,
@@ -102,23 +118,51 @@ const fetchChatHistory = async () => {
         lastMessage: new Date(session.last_activity).toLocaleString()
       };
 
-      if (diffDays === 0) grouped['Today'].push(conversation);
-      else if (diffDays <= 7) grouped['Previous 7 Days'].push(conversation);
-      else grouped['Previous 30 Days'].push(conversation);
+      // Add to appropriate group
+      if (diffDays === 0) {
+        grouped['Today'].push(conversation);
+      } else if (diffDays <= 7) {
+        grouped['Previous 7 Days'].push(conversation);
+      } else {
+        grouped['Previous 30 Days'].push(conversation);
+      }
     });
 
     // Sort each group by timestamp
-    Object.keys(grouped).forEach(group => {
-      grouped[group].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-    })
+    Object.keys(grouped).forEach((group) => {
+      grouped[group].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    });
 
-    // Update sections
+    // Update sections immediately with basic info
     sections.value = ['Today', 'Previous 7 Days', 'Previous 30 Days']
       .map(title => ({
         title,
         conversations: grouped[title] || []
       }))
-      .filter(section => section.conversations.length > 0)
+      .filter(section => section.conversations.length > 0);
+
+    // Then update conversation titles one by one in the background
+    let delay = 0;
+    for (const section of sections.value) {
+      for (const conversation of section.conversations) {
+        // Add delay between requests to prevent overwhelming the server
+        setTimeout(async () => {
+          try {
+            const historyResponse = await api.getChatHistory(conversation.id.toString());
+            const firstUserMessage = historyResponse?.data?.find(msg => msg.role === 'user')?.content;
+            if (firstUserMessage) {
+              conversation.title = firstUserMessage.length > 30 
+                ? `${firstUserMessage.substring(0, 30)}...` 
+                : firstUserMessage;
+            }
+          } catch (error) {
+            console.error(`Error fetching history for session ${conversation.id}:`, error);
+            // Keep the default title on error
+          }
+        }, delay);
+        delay += 200; // Add 200ms delay between each request
+      }
+    }
 
   } catch (err) {
     console.error('Error fetching sessions:', err)
@@ -147,22 +191,24 @@ const filteredSections = computed(() => {
     .filter(section => section.conversations.length > 0)
 })
 
-// Handle hover event on conversation
-const handleHover = (msgContent: string) => {
-  hoveredMessages.value = rawMessages.value.filter(m => m.content === msgContent)
-  showModal.value = true
-}
-
-// Close the chat history modal
-const closeModal = () => {
-  showModal.value = false
-  hoveredMessages.value = []
-}
-
-// Add handleSessionSelect function
-const handleSessionSelect = (sessionId: string) => {
-  console.log('Session selected:', sessionId);
-  emit('showSessionHistory', sessionId);
+// Handle session selection
+const handleSessionSelect = async (sessionId: string) => {
+  try {
+    // Don't show global loading, the TimeSection handles its own loading state
+    const response = await api.getChatHistory(sessionId);
+    if (response?.data) {
+      // First set the session ID in the session manager
+      await sessionManager.setSessionId(sessionId, response.data.length);
+      
+      // Then emit the chat history for loading in the main chat
+      emit('loadChatHistory', sessionId, response.data);
+      
+      // Update current session ID
+      currentSessionId.value = sessionId;
+    }
+  } catch (error) {
+    console.error('Error loading chat history:', error);
+  }
 };
 
 onMounted(fetchChatHistory)

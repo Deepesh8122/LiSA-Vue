@@ -41,7 +41,7 @@
       ]"
     >
       <SidebarHeader @toggle-sidebar="toggleSidebar"/>
-      <ConversationList @showSessionHistory="handleShowHistory" />
+      <ConversationList @loadChatHistory="handleChatHistoryLoad" />
       <UserProfile />
     </div>
 
@@ -163,7 +163,21 @@ const toastInstance = ref<InstanceType<typeof ToastNotification> | null>(null);
 const showWelcome = ref(true);
 const showSessionHistory = ref(false);
 const selectedSessionId = ref('');
-const sessionMessages = ref({
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  created_at?: string;
+}
+
+interface SessionMessagesState {
+  loading: boolean;
+  error: string;
+  data: ChatMessage[];
+}
+
+const sessionMessages = ref<SessionMessagesState>({
   loading: false,
   error: '',
   data: []
@@ -177,30 +191,102 @@ const toggleSidebar = () => {
 };
 
 const initializeSession = async () => {
-  const sessionId = route.params.sessionId;
-  if (sessionId) {
-    // Load existing session
-    selectedSessionId.value = sessionId as string;
-    await fetchSessionHistory(sessionId as string);
-  } else {
-    // Create new session
-    const newSession = sessionManager.createNewSession();
-    await router.replace({ name: 'chat', params: { sessionId: newSession.id } });
-  }
-};
-
-const handleNewChat = async () => {
-  // Clear the current session
-  sessionManager.clearSession();
-  // Create a new session
-  const newSession = sessionManager.createNewSession();
-  // Reset the message list
+  const sessionId = route.params.sessionId as string;
+  
+  // Clear any existing messages first
   if (messageList.value?.clearMessages) {
     messageList.value.clearMessages();
   }
-  // Navigate to the new session
-  await router.push({ name: 'chat', params: { sessionId: newSession.id } });
+  
+  // If no session ID, we're starting a new chat - do nothing until first message
+  if (!sessionId) {
+    return;
+  }
+  
+  try {
+    // Check if this is a valid session ID format (not a new session)
+    // Valid formats: meqngoar_6wfhjo2jn, session_1234567890, etc.
+    const isExistingSession = sessionId && !sessionId.includes('_history');
+    
+    if (isExistingSession) {
+      // Set the session ID without activating
+      await sessionManager.setSessionId(sessionId);
+      selectedSessionId.value = sessionId;
+
+      try {
+        // Fetch chat history
+        const { data } = await api.getChatHistory(sessionId);
+        
+        // Load messages in order if we have any
+        if (data && Array.isArray(data) && data.length > 0) {
+          const sortedHistory = [...data].sort((a, b) => {
+            const timeA = new Date(a.timestamp || a.created_at).getTime();
+            const timeB = new Date(b.timestamp || b.created_at).getTime();
+            return timeA - timeB;
+          });
+
+          // Add each message to the chat
+          for (const msg of sortedHistory) {
+            if (messageList.value?.handleNewMessage) {
+              await messageList.value.handleNewMessage({
+                type: 'text',
+                content: msg.content,
+                response: msg.role === 'assistant' ? msg.content : undefined,
+                sender: msg.role,
+                sessionId: sessionId,
+                isHistory: true,
+                timestamp: msg.timestamp || msg.created_at
+              });
+            }
+          }
+          showSuccess('Chat history loaded successfully');
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+        showError('Error', 'Failed to load chat history');
+      }
+    } else {
+      // Invalid or new session ID format, clear it
+      await router.replace({ name: 'chat' });
+    }
+  } catch (error) {
+    console.error('Failed to initialize session:', error);
+    showError('Error', 'Failed to initialize chat session');
+    await router.replace({ name: 'chat' });
+  }
+}
+
+const handleNewChat = async () => {
+  // Get current messages
+  const currentMessages = messageList.value?.messages?.() || [];
+  
+  // Clear current session and messages
+  sessionManager.clearSession();
+  if (messageList.value?.clearMessages) {
+    messageList.value.clearMessages();
+  }
+  
+  // Just navigate to chat without a session ID - will create one when sending first message
+  await router.push({ 
+    name: 'chat', 
+    replace: true
+  });
 };
+
+// Watch for route changes to handle direct session URL access
+watch(
+  () => route.params.sessionId,
+  async (newSessionId) => {
+    if (newSessionId) {
+      try {
+        await initializeSession();
+      } catch (error) {
+        console.error('Error initializing session:', error);
+        showError('Error', 'Failed to load chat session');
+      }
+    }
+  }
+);
 
 // Initialize toast system and session
 onMounted(() => {
@@ -212,16 +298,33 @@ onMounted(() => {
 
 const handleMessage = async (messageData: MessageData) => {
   try {
-    // Add session ID to message data
-    const sessionId = route.params.sessionId as string;
+    let sessionId = route.params.sessionId as string;
+    let isNewSession = false;
+    
+    // Create new session if this is a new chat
+    if (!sessionId) {
+      const newSession = sessionManager.createNewSession();
+      sessionId = newSession.id;
+      isNewSession = true;
+    }
+    
     const messageWithSession = {
       ...messageData,
-      sessionId
+      sessionId,
+      isNewSession // Add flag to indicate if this is a new session
     };
     
     // Pass the message to MessageList component
     if (messageList.value?.handleNewMessage) {
       await messageList.value.handleNewMessage(messageWithSession);
+      
+      // Only update URL after successful message sending for new sessions
+      if (isNewSession) {
+        await router.replace({ 
+          name: 'chat', 
+          params: { sessionId }
+        });
+      }
       
       if (messageData.type === 'files') {
         showSuccess('Files uploaded and processed successfully');
@@ -239,11 +342,116 @@ api.getStatus()
   .then(() => showSuccess('Connected to API successfully'))
   .catch((err: Error) => showError('Connection Failed', 'Unable to connect to API'));
 
-const handleShowHistory = async (sessionId: string) => {
-  console.log('Opening history for session:', sessionId);
-  selectedSessionId.value = sessionId;
-  showSessionHistory.value = true;
-  await fetchSessionHistory(sessionId);
+const loadChatHistory = async (sessionId: string, history: any[]) => {
+  console.log('Loading chat history for session:', sessionId);
+  
+  try {
+    // Set loading state
+    if (messageList.value?.handleNewMessage) {
+      await messageList.value.handleNewMessage({
+        type: 'loading',
+        content: 'Loading chat history...',
+        isLoading: true
+      });
+    }
+    
+    // Set the session ID first
+    await sessionManager.setSessionId(sessionId);
+    
+    // Reset message list
+    if (messageList.value?.clearMessages) {
+      messageList.value.clearMessages();
+    }
+
+    // Sort messages by timestamp to ensure correct order
+    const sortedHistory = [...history].sort((a, b) => {
+      const timeA = new Date(a.timestamp || a.created_at).getTime();
+      const timeB = new Date(b.timestamp || b.created_at).getTime();
+      return timeA - timeB;
+    });
+
+    // Load messages into the chat
+    for (const msg of sortedHistory) {
+      if (messageList.value?.handleNewMessage) {
+        await messageList.value.handleNewMessage({
+          type: 'text',
+          content: msg.content,
+          response: msg.role === 'assistant' ? msg.content : undefined,
+          sender: msg.role === 'assistant' ? 'ai' : 'user',
+          sessionId: sessionId,
+          isHistory: true,
+          timestamp: msg.timestamp || msg.created_at
+        });
+      }
+    }
+
+    // Navigate to the chat with the session ID
+    await router.push({ 
+      name: 'chat', 
+      params: { sessionId: sessionId },
+      replace: true
+    });
+
+    showSuccess('Chat history loaded successfully');
+  } catch (error) {
+    console.error('Error loading chat history:', error);
+    showError('Error', 'Failed to load chat history');
+  } finally {
+    // Remove loading message if it exists
+    const messages = messageList.value?.messages?.() || [];
+    const loadingIndex = messages.findIndex((msg: any) => msg.type === 'loading');
+    if (loadingIndex !== -1) {
+      messages.splice(loadingIndex, 1);
+    }
+  }
+};
+
+const handleChatHistoryLoad = async (sessionId: string, history: any[]) => {
+  console.log('Handling chat history load:', { sessionId, historyLength: history.length });
+  
+  try {
+    // Set the session ID first
+    await sessionManager.setSessionId(sessionId);
+    
+    // Reset message list
+    if (messageList.value?.clearMessages) {
+      messageList.value.clearMessages();
+    }
+
+    // Sort messages by timestamp to ensure correct order
+    const sortedHistory = [...history].sort((a, b) => {
+      const timeA = new Date(a.timestamp || a.created_at).getTime();
+      const timeB = new Date(b.timestamp || b.created_at).getTime();
+      return timeA - timeB;
+    });
+
+    // Load messages into the chat
+    for (const msg of sortedHistory) {
+      if (messageList.value?.handleNewMessage) {
+        await messageList.value.handleNewMessage({
+          type: 'text',
+          content: msg.content,
+          response: msg.role === 'assistant' ? msg.content : undefined,
+          sender: msg.role === 'assistant' ? 'assistant' : 'user',
+          sessionId: sessionId,
+          isHistory: true,
+          timestamp: msg.timestamp || msg.created_at
+        });
+      }
+    }
+
+    // Update the URL to reflect the current session
+    await router.push({ 
+      name: 'chat', 
+      params: { sessionId: sessionId },
+      replace: true
+    });
+
+    showSuccess('Chat history loaded successfully');
+  } catch (error) {
+    console.error('Error loading chat history:', error);
+    showError('Error', 'Failed to load chat history');
+  }
 };
 
 const fetchSessionHistory = async (sessionId: string) => {

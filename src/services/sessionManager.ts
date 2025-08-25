@@ -84,15 +84,43 @@ class SessionManager {
   /**
    * Set session ID from external source (e.g., server response)
    */
-  setSessionId(sessionId: string): void {
+  async setSessionId(sessionId: string, messageCount: number = 0): Promise<void> {
+    // Create or update session
     const session: ChatSession = {
       id: sessionId,
       createdAt: Date.now(),
       lastUsed: Date.now(),
-      messageCount: 0
+      messageCount: messageCount
     }
+    
+    // Store the session
     this.currentSession = session
     this.saveSession(session)
+    
+    // No need to activate the session as we'll use it when sending the first message
+  }
+
+  /**
+   * Activate an existing session on the server
+   * This is now only called when actually needed
+   */
+  private async activateSession(sessionId: string): Promise<void> {
+    try {
+      // Only activate if really needed, without sending empty message
+      await fetch('http://109.228.57.128:8080/chat/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_HF_TOKEN}`
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          activate_only: true
+        })
+      })
+    } catch (error) {
+      throw new Error(`Failed to activate session: ${error}`)
+    }
   }
 
   /**
@@ -128,8 +156,8 @@ class SessionManager {
    * Generate a unique session ID
    */
   private generateSessionId(): string {
-    // Generate a UUID-like string for session ID
-    return 'session_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9)
+    // Generate a UUID-like string for session ID that indicates a new session
+    return Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
   }
 
   /**

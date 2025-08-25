@@ -25,7 +25,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+defineOptions({
+  name: 'SearchBar'
+})
+import { ref } from 'vue'
 
 const emit = defineEmits<{
   (e: 'search', query: string): void

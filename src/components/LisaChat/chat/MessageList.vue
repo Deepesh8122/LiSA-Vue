@@ -93,15 +93,8 @@
         </div>
 
         <!-- Loading Message -->
-        <div v-else-if="message.type === 'loading'" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">{{ message.content }}</span>
-            <div class="flex gap-1">
-              <div class="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-              <div class="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-              <div class="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
-            </div>
-          </div>
+        <div v-else-if="message.type === 'loading'" class="bg-white/50 backdrop-blur-sm rounded-lg shadow-sm">
+          <LoadingIndicator :message="message.content" />
         </div>
 
         <!-- Error Message -->
@@ -132,6 +125,7 @@ import MarkdownRenderer from '@/components/LisaChat/chat/MarkdownRenderer.vue'
 import TranslationResult from '@/components/LisaChat/chat/TranslationResult.vue'
 import DocumentSummary from '@/components/LisaChat/chat/DocumentSummary.vue'
 import SourceReferences from '@/components/LisaChat/chat/SourceReferences.vue'
+import LoadingIndicator from '@/components/LisaChat/chat/LoadingIndicator.vue'
 import type { Message } from '@/components/types'
 
 const chatContainer = ref<HTMLElement | null>(null)
@@ -158,6 +152,26 @@ const handleNewMessage = async (messageData: any) => {
 
   // Handle text messages with loading state
   if (messageData.type === 'text') {
+    // If this message is from history, add it directly
+    if (messageData.isHistory) {
+      const message: Message = {
+        id: ++messageCounter,
+        sender: messageData.response ? 'ai' : 'user',
+        type: 'text',
+        content: messageData.response || messageData.content,
+        timestamp: messageData.timestamp ? new Date(messageData.timestamp) : new Date(),
+        parsedResponse: messageData.parsedResponse,
+        sessionId: messageData.sessionId,
+        sources: messageData.sources,
+        functionCalls: messageData.functionCalls,
+        translations: messageData.translations,
+        summaries: messageData.summaries,
+        isStructuredResponse: messageData.isStructuredResponse
+      }
+      messages.value.push(message)
+      return
+    }
+
     // If this is the initial message (with loading), add user message and loading indicator
     if (messageData.isLoading && !messageData.timeoutWarning) {
       // Add user message
@@ -229,19 +243,24 @@ const handleNewMessage = async (messageData: any) => {
   }
 }
 
+// Loading state management
+const isLoading = ref(false)
+
 // Add loading message
 const addLoadingMessage = () => {
+  isLoading.value = true
   messages.value.push({
     id: ++messageCounter,
     sender: 'ai',
     type: 'loading',
-    content: 'LiSA is typing...',
+    content: 'LiSA is thinking...',
     timestamp: new Date()
   })
 }
 
 // Remove loading message
 const removeLoadingMessage = () => {
+  isLoading.value = false
   const loadingIndex = messages.value.findIndex(msg => msg.type === 'loading')
   if (loadingIndex !== -1) {
     messages.value.splice(loadingIndex, 1)
@@ -262,10 +281,16 @@ const clearMessages = () => {
   messageCounter = 0;
 };
 
-// Expose the handleNewMessage and clearMessages methods
+// Get current messages
+const getMessages = () => {
+  return messages.value;
+};
+
+// Expose the methods
 defineExpose({
   handleNewMessage,
-  clearMessages
+  clearMessages,
+  messages: getMessages
 });
 
 // Existing helper functions
@@ -324,15 +349,12 @@ watch(
 .fade-enter-to, .fade-leave-from {
   opacity: 1;
 }
-.lisa-responsed {
-
-}
 .custom-path {
-    fill: url(#gradient);
-    transition: fill 0.3s ease;
-  }
+  fill: url(#gradient);
+  transition: fill 0.3s ease;
+}
 
-  .custom-path:hover {
-    fill: #FF3D77;
-  }
+.custom-path:hover {
+  fill: #FF3D77;
+}
 </style>
