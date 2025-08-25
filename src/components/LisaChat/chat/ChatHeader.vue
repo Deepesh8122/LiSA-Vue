@@ -137,7 +137,7 @@ const actions = computed(() => [
     icon: 'add',
     label: 'New Chat',
     class: 'flex bg-[#4318FF] text-white hover:bg-[#4318FF] px-2 pr-3',
-    onClick: () => console.log('Clear chat')
+    onClick: () => emit('new-chat')
   },
     // {
   //   icon: 'add',
@@ -153,7 +153,7 @@ interface Props {
 
 
 const props = defineProps<Props>()
-const emit = defineEmits(['toggle-sidebar'])
+const emit = defineEmits(['toggle-sidebar', 'new-chat'])
 const dropdownRef = ref<HTMLElement | null>(null)
 const isDropdownOpen = ref(false)
 const selectedModel = ref(models[0])

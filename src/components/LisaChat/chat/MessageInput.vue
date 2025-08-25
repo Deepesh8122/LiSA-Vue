@@ -498,6 +498,8 @@ const sendMessage = async () => {
     if (message.value.trim() && !isUploading.value) {
       const currentMessage = message.value.trim()
       message.value = '' // Clear message input immediately
+      let retryCount = 0;
+      const maxRetries = 3;
       
       try {
         // Set processing state
@@ -509,20 +511,40 @@ const sendMessage = async () => {
           content: currentMessage,
           isLoading: true
         })
+
+        const attemptQuery = async () => {
+          try {
+            // Set timeout warning to show after 15 seconds
+            timeoutWarningTimer = setTimeout(() => {
+              timeoutWarning.value = true
+              emit('message-sent', {
+                type: 'text',
+                content: currentMessage,
+                isLoading: true,
+                timeoutWarning: true
+              })
+            }, 15000)
+
+            return await api.chatQuery(currentMessage);
+          } catch (error) {
+            const hasTimeoutError = error && 
+                                  (error.code === 'ECONNABORTED' || 
+                                   (error.message && 
+                                    (error.message.includes('timeout') || 
+                                     error.message.includes('Network Error'))));
+            
+            if (hasTimeoutError && retryCount < maxRetries) {
+              retryCount++;
+              const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+              await new Promise(resolve => setTimeout(resolve, delay));
+              return attemptQuery(); // Retry the query
+            }
+            throw error; // If we're out of retries or it's a different error
+          }
+        };
         
-        // Set timeout warning to show after 15 seconds
-        timeoutWarningTimer = setTimeout(() => {
-          timeoutWarning.value = true
-          emit('message-sent', {
-            type: 'text',
-            content: currentMessage,
-            isLoading: true,
-            timeoutWarning: true
-          })
-        }, 15000)
-        
-        // Use the enhanced chatQuery method with session management
-        const response = await api.chatQuery(currentMessage)
+        // Use the enhanced chatQuery method with retry logic
+        const response = await attemptQuery();
         
         // Clear timeout warning
         if (timeoutWarningTimer) {
@@ -571,6 +593,19 @@ const sendMessage = async () => {
           timeoutWarningTimer = null
         }
         timeoutWarning.value = false
+
+        // Determine error message based on error type
+        // Determine error message based on error type
+        const errorMsg = 
+          error.code === 'ECONNABORTED' || error.message.includes('timeout')
+            ? `Request timed out after ${maxRetries} attempts. The server may be busy, please try again in a moment.`
+            : error.message.includes('Network Error')
+            ? 'Unable to connect to the server. Please check your internet connection and try again.'
+            : error.response?.status === 401
+            ? 'Authentication failed. Please log in again.'
+            : error.response?.status >= 500
+            ? 'Server error. Please try again in a moment.'
+            : 'An error occurred while processing your message.';
         
         // Provide better error messages for timeout
         let errorMessage = 'Failed to send message'

@@ -16,7 +16,7 @@ const router = createRouter({
       component: LoginPage
     },
     {
-      path: '/chat',
+      path: '/chat/:sessionId?',
       name: 'chat',
       component: LisaChatPage,
       meta: { requiresAuth: true }

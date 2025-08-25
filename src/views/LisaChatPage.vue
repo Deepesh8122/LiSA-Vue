@@ -63,7 +63,8 @@
     >
       <ChatHeader 
           :is-sidebar-open="isSidebarOpen" 
-          @toggle-sidebar="toggleSidebar" 
+          @toggle-sidebar="toggleSidebar"
+          @new-chat="handleNewChat"
         />
       <div class="flex flex-col flex-1 max-w-[767px] mx-auto w-full overflow-hidden justify-center">
         <MessageList ref="messageList" />
@@ -136,7 +137,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import SidebarHeader from "@/components/LisaChat/sidebar/SidebarHeader.vue";
 import ConversationList from "@/components/LisaChat/sidebar/ConversationList.vue";
 import UserProfile from "@/components/LisaChat/sidebar/UserProfile.vue";
@@ -146,6 +148,7 @@ import MessageInput from "@/components/LisaChat/chat/MessageInput.vue";
 import ToastNotification from "@/components/shared/ToastNotification.vue";
 import { useToast } from "@/composables/useToast";
 import api from "@/services";
+import sessionManager from "@/services/sessionManager";
 
 interface MessageData {
   type: 'text' | 'files';
@@ -165,24 +168,60 @@ const sessionMessages = ref({
   error: '',
   data: []
 });
+const router = useRouter();
+const route = useRoute();
 const { setToastInstance, showSuccess, showError } = useToast();
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-// Initialize toast system
+const initializeSession = async () => {
+  const sessionId = route.params.sessionId;
+  if (sessionId) {
+    // Load existing session
+    selectedSessionId.value = sessionId as string;
+    await fetchSessionHistory(sessionId as string);
+  } else {
+    // Create new session
+    const newSession = sessionManager.createNewSession();
+    await router.replace({ name: 'chat', params: { sessionId: newSession.id } });
+  }
+};
+
+const handleNewChat = async () => {
+  // Clear the current session
+  sessionManager.clearSession();
+  // Create a new session
+  const newSession = sessionManager.createNewSession();
+  // Reset the message list
+  if (messageList.value?.clearMessages) {
+    messageList.value.clearMessages();
+  }
+  // Navigate to the new session
+  await router.push({ name: 'chat', params: { sessionId: newSession.id } });
+};
+
+// Initialize toast system and session
 onMounted(() => {
   if (toastInstance.value) {
     setToastInstance(toastInstance.value);
   }
+  initializeSession();
 });
 
 const handleMessage = async (messageData: MessageData) => {
   try {
+    // Add session ID to message data
+    const sessionId = route.params.sessionId as string;
+    const messageWithSession = {
+      ...messageData,
+      sessionId
+    };
+    
     // Pass the message to MessageList component
     if (messageList.value?.handleNewMessage) {
-      await messageList.value.handleNewMessage(messageData);
+      await messageList.value.handleNewMessage(messageWithSession);
       
       if (messageData.type === 'files') {
         showSuccess('Files uploaded and processed successfully');

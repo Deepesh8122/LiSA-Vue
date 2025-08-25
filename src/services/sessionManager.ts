@@ -82,6 +82,20 @@ class SessionManager {
   }
 
   /**
+   * Set session ID from external source (e.g., server response)
+   */
+  setSessionId(sessionId: string): void {
+    const session: ChatSession = {
+      id: sessionId,
+      createdAt: Date.now(),
+      lastUsed: Date.now(),
+      messageCount: 0
+    }
+    this.currentSession = session
+    this.saveSession(session)
+  }
+
+  /**
    * Check if session should persist across browser refreshes
    */
   shouldPersistSession(): boolean {

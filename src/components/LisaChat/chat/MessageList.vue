@@ -256,9 +256,16 @@ const updateLoadingMessage = (newContent: string) => {
   }
 }
 
-// Expose the handleNewMessage method
+// Clear all messages
+const clearMessages = () => {
+  messages.value = [];
+  messageCounter = 0;
+};
+
+// Expose the handleNewMessage and clearMessages methods
 defineExpose({
-  handleNewMessage
+  handleNewMessage,
+  clearMessages
 });
 
 // Existing helper functions

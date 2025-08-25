@@ -168,19 +168,19 @@ const api = {
 
   // Enhanced chat query method with session management and response parsing
   async chatQuery(message: string): Promise<EnhancedApiResponse> {
+    const timeoutDuration = 60000; // 60 seconds
+    const cancelToken = axios.CancelToken.source();
+    let timeoutHandle: number | undefined;
+
     try {
       const sessionId = sessionManager.getSessionId();
+      
+      // Set up timeout handler
+      timeoutHandle = window.setTimeout(() => {
+        cancelToken.cancel('Request timed out after ' + timeoutDuration/1000 + ' seconds');
+      }, timeoutDuration);
 
-      // Log outgoing request payload
-      console.log('chatQuery -> request payload:', {
-        url: 'http://109.228.57.128:8080/chat/query',
-        body: { message, session_id: sessionId },
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${HF_BEARER_TOKEN}`
-        }
-      });
-
+      // Make the request
       const response = await axios.post('http://109.228.57.128:8080/chat/query', {
         message: message,
         session_id: sessionId
@@ -189,8 +189,24 @@ const api = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${HF_BEARER_TOKEN}`
         },
-        timeout: 100000,
+        timeout: timeoutDuration,
+        cancelToken: cancelToken.token
       });
+
+      if (timeoutHandle) {
+        window.clearTimeout(timeoutHandle);
+      }
+
+      // Process response
+      const processedResponse = responseParser.parseResponse(response.data);
+      sessionManager.incrementMessageCount();
+
+      return {
+        data: response.data,
+        status: response.status,
+        parsedData: processedResponse,
+        sessionId: sessionId
+      };
 
       // Log full axios response (stringified to reveal nested structure)
       try {
@@ -267,17 +283,28 @@ const api = {
     } catch (error: any) {
       console.error('Chat query error:', error);
       
+      // Clean up timeout if it exists
+      if (timeoutHandle) {
+        window.clearTimeout(timeoutHandle);
+      }
+      
       // Provide better error messages
-      if (error.code === 'ECONNABORTED') {
-        throw new Error('Request timed out - the server may be busy. Please try again.');
-      } else if (error.response?.status === 401) {
-        throw new Error('Authentication failed - please check your credentials.');
-      } else if (error.response?.status >= 500) {
-        throw new Error('Server error - please try again in a moment.');
-      } else if (error.response?.status >= 400) {
-        throw new Error('Bad request - please check your message and try again.');
-      } else {
-        throw new Error(`Request failed: ${error.message || 'Unknown error'}`);
+      const errorMessage = 
+        error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+          ? 'Request timed out - the server may be busy. Please try again.'
+          : error.response?.status === 401
+          ? 'Authentication failed - please check your credentials.'
+          : error.response?.status >= 500
+          ? 'Server error - please try again in a moment.'
+          : error.response?.status >= 400
+          ? 'Bad request - please check your message and try again.'
+          : `Request failed: ${error.message || 'Network error'}`;
+      
+      throw new Error(errorMessage);
+    } finally {
+      // Ensure timeout is always cleared
+      if (timeoutHandle) {
+        window.clearTimeout(timeoutHandle);
       }
     }
   },
