@@ -545,6 +545,8 @@ const sendMessage = async () => {
             translations: response.parsedData.translations,
             summaries: response.parsedData.summaries,
             isStructuredResponse: response.parsedData.hasFunctionCalls,
+            // fallback to raw response source_attribution if parser didn't set it
+            source_attribution: response.parsedData?.source_attribution || response.data?.source_attribution || null,
             isLoading: false
           })
         } else {
@@ -554,6 +556,8 @@ const sendMessage = async () => {
             content: currentMessage,
             response: response.data.response || response.data.answer || response.data,
             sessionId: response.sessionId,
+            // include raw source attribution in fallback too
+            source_attribution: response.data?.source_attribution || null,
             isLoading: false
           })
         }

@@ -169,10 +169,18 @@ const api = {
   // Enhanced chat query method with session management and response parsing
   async chatQuery(message: string): Promise<EnhancedApiResponse> {
     try {
-      // Get current session ID
       const sessionId = sessionManager.getSessionId();
-      
-      // Make API request with session_id
+
+      // Log outgoing request payload
+      console.log('chatQuery -> request payload:', {
+        url: 'http://109.228.57.128:8080/chat/query',
+        body: { message, session_id: sessionId },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${HF_BEARER_TOKEN}`
+        }
+      });
+
       const response = await axios.post('http://109.228.57.128:8080/chat/query', {
         message: message,
         session_id: sessionId
@@ -184,29 +192,76 @@ const api = {
         timeout: 100000,
       });
 
+      // Log full axios response (stringified to reveal nested structure)
+      try {
+        console.log('chatQuery -> full response (stringified):', JSON.stringify(response.data, null, 2));
+      } catch (e) {
+        console.log('chatQuery -> full response (raw):', response.data);
+      }
+
+      // Helper: attempt to extract source_attribution from common places,
+      // including if response.data.response is stringified JSON.
+      const extractSourceAttribution = (raw: any) => {
+        if (!raw) return null;
+        // direct field
+        if (raw.source_attribution) return raw.source_attribution;
+        // nested under response (could be object or JSON string)
+        const candidates = [raw.response, raw.answer, raw.data];
+        for (const c of candidates) {
+          if (!c) continue;
+          if (typeof c === 'string') {
+            try {
+              const parsed = JSON.parse(c);
+              if (parsed?.source_attribution) return parsed.source_attribution;
+            } catch (e) {
+              // not JSON - skip
+            }
+          } else if (typeof c === 'object' && c?.source_attribution) {
+            return c.source_attribution;
+          }
+        }
+        return null;
+      };
+
+      const rawSourceAttr = extractSourceAttribution(response.data);
+
       // Validate response structure
       if (!responseParser.isValidResponse(response.data)) {
         console.warn('Invalid response structure:', response.data);
-        // Fall back to basic response handling
+        // Fall back to basic response handling, but include raw source_attribution
         return {
           data: response.data.response || response.data.answer || response.data,
           status: response.status,
-          sessionId: sessionId
+          sessionId: sessionId,
+          // attach rawResponse so callers can inspect full payload
+          parsedData: undefined,
+          // @ts-ignore - adding extra debug prop
+          rawResponse: response.data,
+          // preserve source attribution so UI can show it
+          // @ts-ignore
+          source_attribution: rawSourceAttr ?? null
         };
       }
 
       // Parse structured response
       const parsedData = responseParser.parseResponse(response.data);
-      
+
+      // Ensure source_attribution is preserved if parser didn't populate it
+      if (!parsedData.source_attribution && rawSourceAttr) {
+        parsedData.source_attribution = rawSourceAttr;
+      }
+
       // Update session
       sessionManager.incrementMessageCount();
 
-      // Return enhanced response
+      // Return enhanced response including rawResponse for debugging/inspection
       return {
         data: response.data,
         status: response.status,
         parsedData: parsedData,
-        sessionId: sessionId
+        sessionId: sessionId,
+        // @ts-ignore
+        rawResponse: response.data
       };
 
     } catch (error: any) {

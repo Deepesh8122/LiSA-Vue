@@ -87,7 +87,7 @@
             <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-[#4318FF]">
               <h3 class="text-xl font-semibold text-white">Chat History</h3>
               <button @click="closeSessionHistory" class="text-white hover:text-gray-200">
-                <MaterialIcon name="close" size="text-xl" />
+                X
               </button>
             </div>
             
