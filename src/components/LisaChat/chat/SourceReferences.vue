@@ -1,5 +1,5 @@
 <template>
-  <div v-if="sources.length > 0" class="source-references border border-purple-200 rounded-lg p-4 bg-purple-50">
+  <div v-if="isHidden && sources.length > 0" class="source-references border border-purple-200 rounded-lg p-4 bg-purple-50">
     <!-- Header -->
     <div class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-2">
@@ -139,6 +139,32 @@
       </div>
     </div>
   </div>
+
+  <div 
+  v-if="sources.length > 0">
+      <h3 class="font-semibold text-purple-900">Source Reference Image</h3>
+        <div  v-for="(source, index) in displayedSources" :key="index">
+            <!-- Render image if src is an image -->
+            <img 
+              v-if="isImage(source)" 
+              :src="server_URL + source" 
+              alt="Preview"
+            />
+
+            <!-- Otherwise render iframe -->
+            <iframe 
+              v-else 
+              :src="server_URL + source" 
+              width="99%" 
+              height="auto" 
+              frameborder="0">
+            </iframe>
+            <p>
+              {{ source }}
+            </p>
+          </div>
+        <p class="text-sm text-purple-700">{{ sources.length }} document{{ sources.length > 1 ? 's' : '' }} referenced</p>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -154,6 +180,16 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   expanded: false
 })
+
+let isHidden = false;
+
+const server_URL = 'http://109.228.57.128:8080';
+
+// Check if file extension is image
+const isImage = (src) => {
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(src);
+};
+
 
 const isExpanded = ref(props.expanded)
 const showAll = ref(false)

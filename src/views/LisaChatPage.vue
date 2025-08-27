@@ -41,7 +41,7 @@
       ]"
     >
       <SidebarHeader @toggle-sidebar="toggleSidebar"/>
-      <ConversationList @loadChatHistory="handleChatHistoryLoad" />
+      <ConversationList ref="conversationList" @loadChatHistory="handleChatHistoryLoad" />
       <UserProfile />
     </div>
 
@@ -159,6 +159,7 @@ interface MessageData {
 
 const isSidebarOpen = ref(window.innerWidth >= 768);
 const messageList = ref<InstanceType<typeof MessageList> | null>(null);
+const conversationList = ref<InstanceType<typeof ConversationList> | null>(null);
 const toastInstance = ref<InstanceType<typeof ToastNotification> | null>(null);
 const showWelcome = ref(true);
 const showSessionHistory = ref(false);
@@ -257,20 +258,27 @@ const initializeSession = async () => {
 }
 
 const handleNewChat = async () => {
-  // Get current messages
-  const currentMessages = messageList.value?.messages?.() || [];
-  
-  // Clear current session and messages
-  sessionManager.clearSession();
-  if (messageList.value?.clearMessages) {
-    messageList.value.clearMessages();
+  try {
+    // Clear current session and messages
+    sessionManager.clearSession();
+    if (messageList.value?.clearMessages) {
+      messageList.value.clearMessages();
+    }
+    
+    // Create a new session immediately
+    const newSession = await sessionManager.createNewSession();
+    
+    // Navigate to chat with the new session ID
+    await router.push({ 
+      name: 'chat', 
+      params: { sessionId: newSession.id },
+      replace: true
+    });
+    
+  } catch (error) {
+    console.error('Error creating new chat:', error);
+    showError('Failed to create new chat session');
   }
-  
-  // Just navigate to chat without a session ID - will create one when sending first message
-  await router.push({ 
-    name: 'chat', 
-    replace: true
-  });
 };
 
 // Watch for route changes to handle direct session URL access
@@ -298,36 +306,30 @@ onMounted(() => {
 
 const handleMessage = async (messageData: MessageData) => {
   try {
-    let sessionId = route.params.sessionId as string;
-    let isNewSession = false;
+    const sessionId = route.params.sessionId as string;
     
-    // Create new session if this is a new chat
+    // Don't create new session here - it should already exist
     if (!sessionId) {
-      const newSession = sessionManager.createNewSession();
-      sessionId = newSession.id;
-      isNewSession = true;
+      throw new Error('No session ID found. Please create a new chat session.');
     }
     
     const messageWithSession = {
       ...messageData,
       sessionId,
-      isNewSession // Add flag to indicate if this is a new session
+      isNewSession: false // Never treat as new session here
     };
     
     // Pass the message to MessageList component
     if (messageList.value?.handleNewMessage) {
       await messageList.value.handleNewMessage(messageWithSession);
       
-      // Only update URL after successful message sending for new sessions
-      if (isNewSession) {
-        await router.replace({ 
-          name: 'chat', 
-          params: { sessionId }
-        });
-      }
-      
       if (messageData.type === 'files') {
         showSuccess('Files uploaded and processed successfully');
+      }
+      
+      // Refresh the conversation list to show the new message
+      if (conversationList.value?.fetchChatHistory) {
+        await conversationList.value.fetchChatHistory();
       }
     }
   } catch (err) {

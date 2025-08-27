@@ -161,12 +161,14 @@
 import { ref, computed } from 'vue'
 import MaterialIcon from '@/components/icons/MaterialIcon.vue'
 import api from '@/services/api'
+import sessionManager from '@/services/sessionManager'
 import { v4 as uuidv4 } from 'uuid'
 
 const emit = defineEmits(['message-sent'])
 const message = ref('')
 const selectedFiles = ref([])
-const sessionId = ref(uuidv4()) // Generate a unique session ID for the conversation
+// Initialize or get existing session ID
+const sessionId = ref(sessionManager.getSessionId() || uuidv4())
 
 // Loading states
 const isUploading = ref(false)
@@ -426,6 +428,11 @@ const audioBufferToWav = (audioBuffer) => {
   return new Blob([arrayBuffer], { type: 'audio/wav' })
 }
 
+// Check if this is a new chat session
+const isNewChatSession = () => {
+  return !sessionManager.getSessionId();
+}
+
 const sendMessage = async () => {
   try {
     // Handle file upload if files are selected
@@ -504,55 +511,67 @@ const sendMessage = async () => {
       try {
         // Set processing state
         isProcessing.value = true
-        
-        // Emit message with loading state
-        emit('message-sent', {
-          type: 'text',
-          content: currentMessage,
-          isLoading: true
-        })
 
-        const attemptQuery = async () => {
+        let emittedLoading = false;
+        // Only emit loading state if not a new chat
+        if (!isNewChatSession()) {
+          emit('message-sent', {
+            type: 'text',
+            content: currentMessage,
+            isLoading: true
+          })
+          emittedLoading = true;
+        }
+
+        // Create new session if needed
+        if (isNewChatSession()) {
+          await sessionManager.createNewSession();
+          sessionId.value = sessionManager.getSessionId();
+        }
+
+        const response = await (async () => {
           try {
             // Set timeout warning to show after 15 seconds
             timeoutWarningTimer = setTimeout(() => {
               timeoutWarning.value = true
-              emit('message-sent', {
-                type: 'text',
-                content: currentMessage,
-                isLoading: true,
-                timeoutWarning: true
-              })
+              if (!emittedLoading) {
+                emit('message-sent', {
+                  type: 'text',
+                  content: currentMessage,
+                  isLoading: true,
+                  timeoutWarning: true
+                })
+                emittedLoading = true;
+              }
             }, 15000)
 
-            return await api.chatQuery(currentMessage);
+            const result = await api.chatQuery(currentMessage);
+
+            // Clear timeout warning
+            if (timeoutWarningTimer) {
+              clearTimeout(timeoutWarningTimer)
+              timeoutWarningTimer = null
+            }
+            timeoutWarning.value = false
+
+            return result;
           } catch (error) {
             const hasTimeoutError = error && 
-                                  (error.code === 'ECONNABORTED' || 
-                                   (error.message && 
-                                    (error.message.includes('timeout') || 
-                                     error.message.includes('Network Error'))));
+              (error.code === 'ECONNABORTED' || 
+               (error.message && 
+                (error.message.includes('timeout') || 
+                 error.message.includes('Network Error'))));
             
             if (hasTimeoutError && retryCount < maxRetries) {
               retryCount++;
               const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
               await new Promise(resolve => setTimeout(resolve, delay));
-              return attemptQuery(); // Retry the query
+              return await api.chatQuery(currentMessage);
             }
-            throw error; // If we're out of retries or it's a different error
+            throw error;
           }
-        };
-        
-        // Use the enhanced chatQuery method with retry logic
-        const response = await attemptQuery();
-        
-        // Clear timeout warning
-        if (timeoutWarningTimer) {
-          clearTimeout(timeoutWarningTimer)
-          timeoutWarningTimer = null
-        }
-        timeoutWarning.value = false
-        
+        })();
+
         // Handle enhanced response with structured data
         if (response.parsedData) {
           // Send structured response
@@ -561,13 +580,11 @@ const sendMessage = async () => {
             content: currentMessage,
             response: response.data.response || response.data.answer || response.data,
             parsedResponse: response.parsedData,
-            // sessionId: response.sessionId,
             sources: response.parsedData.sources,
             functionCalls: response.parsedData.functionCalls,
             translations: response.parsedData.translations,
             summaries: response.parsedData.summaries,
             isStructuredResponse: response.parsedData.hasFunctionCalls,
-            // fallback to raw response source_attribution if parser didn't set it
             source_attribution: response.parsedData?.source_attribution || response.data?.source_attribution || null,
             isLoading: false
           })
@@ -578,12 +595,11 @@ const sendMessage = async () => {
             content: currentMessage,
             response: response.data.response || response.data.answer || response.data,
             sessionId: response.sessionId,
-            // include raw source attribution in fallback too
             source_attribution: response.data?.source_attribution || null,
             isLoading: false
           })
         }
-        
+
       } catch (error) {
         console.error('Error sending chat message:', error)
         

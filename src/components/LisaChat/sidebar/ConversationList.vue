@@ -213,4 +213,7 @@ const handleSessionSelect = async (sessionId: string) => {
 
 onMounted(fetchChatHistory)
 
+// Expose methods that can be called from parent components
+defineExpose({ fetchChatHistory });
+
 </script>

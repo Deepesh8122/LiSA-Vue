@@ -35,8 +35,18 @@
       <div class="flex-1">
         <!-- Text Message -->
         <div v-if="message.type === 'text'">
+          <!-- Display regular markdown content with sources -->
+          <MarkdownRenderer 
+            :content="message.content"
+            :sources="message.sources"
+          />
+
+          <!-- <pre>
+            {{ message }}
+          </pre> -->
+
           <!-- Display structured translation results if available -->
-          <div v-if="message.translations && message.translations.length > 0" class="space-y-4 mb-4">
+          <div v-if="isHidden && message.translations && message.translations.length > 0" class="space-y-4 mb-4">
             <TranslationResult 
               v-for="(translation, index) in message.translations" 
               :key="`translation-${message.id}-${index}`"
@@ -46,7 +56,7 @@
           </div>
 
           <!-- Display structured summary results if available -->
-          <div v-if="message.summaries && message.summaries.length > 0" class="space-y-4 mb-4">
+          <div v-if="isHidden && message.summaries && message.summaries.length > 0" class="space-y-4 mb-4">
             <DocumentSummary 
               v-for="(summary, index) in message.summaries" 
               :key="`summary-${message.id}-${index}`"
@@ -54,28 +64,7 @@
               :expanded="false"
             />
           </div>
-          
 
-          <!-- Display source references if available -->
-          <div v-if="message.sources && message.sources.length > 0" class="mb-4">
-            <SourceReferences 
-              :sources="message.sources"
-              :expanded="false"
-            />
-          </div>
-
-          <!-- Display regular markdown content -->
-           
-          <!-- <p>
-            {{ message }}
-          </p> -->
-          <MarkdownRenderer :content="message.content" />
-
-          <div v-if="message.sources">
-            <a :href="message.sources" target="blank">
-              <img :src="message.sources" alt="img" >
-            </a>
-          </div>
         </div>
 
         <!-- File Message -->
@@ -125,7 +114,9 @@ import type { Message } from '@/components/types'
 
 const chatContainer = ref<HTMLElement | null>(null)
 const messages = ref<Message[]>([])
-let messageCounter = 0
+let messageCounter = 0;
+
+let isHidden = false;
 
 // Handle new messages from MessageInput
 const handleNewMessage = async (messageData: any) => {
@@ -237,6 +228,13 @@ const handleNewMessage = async (messageData: any) => {
     })
   }
 }
+
+const serverURL = import.meta.env.VITE_API_BASE_URL;
+
+// Check if file extension is image
+const isImage = (src: string): boolean => {
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(src);
+};
 
 // Loading state management
 const isLoading = ref(false)

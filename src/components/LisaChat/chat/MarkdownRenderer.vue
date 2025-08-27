@@ -1,8 +1,13 @@
 <template>
-  <div 
-    class="markdown-content prose max-w-none"
-    v-html="renderedContent"
-  ></div>
+  <div class="markdown-wrapper">
+    <div 
+      class="markdown-content prose max-w-none"
+      v-html="renderedContent"
+    ></div>
+    <div v-if="sources && sources.length > 0" class="mt-4">
+      <SourceReferences :sources="sources" :expanded="false" />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -10,6 +15,7 @@ import { computed, onMounted } from 'vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js/lib/core'
 import DOMPurify from 'dompurify'
+import SourceReferences from './SourceReferences.vue'
 
 // Import commonly used languages for syntax highlighting
 import javascript from 'highlight.js/lib/languages/javascript'
@@ -29,9 +35,12 @@ import 'highlight.js/styles/github.css'
 
 interface Props {
   content: string
+  sources?: string[]
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  sources: () => []
+})
 
 // Register languages with highlight.js
 onMounted(() => {
