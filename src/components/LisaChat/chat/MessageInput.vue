@@ -561,7 +561,7 @@ const sendMessage = async () => {
             content: currentMessage,
             response: response.data.response || response.data.answer || response.data,
             parsedResponse: response.parsedData,
-            sessionId: response.sessionId,
+            // sessionId: response.sessionId,
             sources: response.parsedData.sources,
             functionCalls: response.parsedData.functionCalls,
             translations: response.parsedData.translations,
