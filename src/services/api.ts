@@ -404,7 +404,9 @@ const api = {
 
   async getStatus(): Promise<ApiResponse<StatusResponse>> {
     try {
-      const response = await apiClient.get('/health');
+      const response = await apiClient.get(`${import.meta.env.VITE_API_BASE_URL}health`);
+      // console.log('API Health Status:', response);
+      
       return response;
     } catch (error) {
       console.error('API Error:', error);
@@ -430,7 +432,7 @@ const api = {
   // Session Management Methods
   async getChatSessions(): Promise<ApiResponse> {
     try {
-  const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/chat/sessions`, {
+  const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}chat/sessions`, {
         headers: {
           'Authorization': `Bearer ${HF_BEARER_TOKEN}`
         }
