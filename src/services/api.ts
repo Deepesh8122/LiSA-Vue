@@ -448,7 +448,7 @@ const api = {
         throw new Error('Session ID is required');
       }
 
-  const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}chat/history/${sessionId}`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/chat/history/${sessionId}`, {
         headers: {
           'Authorization': `Bearer ${HF_BEARER_TOKEN}`,
           'Content-Type': 'application/json'
@@ -461,6 +461,16 @@ const api = {
         status: response.status
       };
     } catch (error: any) {
+      // If it's a 404, this is a new session with no history yet
+      if (error.response?.status === 404) {
+        console.log('New session, returning empty history:', sessionId);
+        return {
+          data: [],
+          status: 200,
+          statusText: 'OK'
+        };
+      }
+      
       console.error('Failed to fetch chat history:', error);
       throw new Error(error.response?.data?.message || 'Failed to load chat history');
     }

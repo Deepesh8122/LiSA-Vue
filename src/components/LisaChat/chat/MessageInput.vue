@@ -115,18 +115,29 @@
         />
       </button>
 
-      <div class="flex-1 min-h-[40px] flex items-end">
+      <div class="flex-1 min-h-[40px] flex items-end relative">
         <textarea
           v-model="message"
+          ref="messageInput"
           rows="1"
           placeholder="Type a message..."
           :disabled="isProcessing"
           :class="[
-            'w-full resize-none rounded-lg border border-gray-200 p-2 focus:outline-none focus:ring-2 focus:ring-[#4318FF] min-h-[48px] max-h-[120px]',
-            isProcessing ? 'bg-gray-100 cursor-not-allowed' : ''
+            'w-full resize-none rounded-lg border border-gray-200 p-3 focus:outline-none focus:ring-2 focus:ring-[#4318FF] min-h-[48px] max-h-[200px] overflow-y-auto',
+            'transition-all duration-200 ease-in-out',
+            'placeholder-gray-400 text-gray-800',
+            isProcessing ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
           ]"
-          @keydown.enter.prevent="sendMessage"
+          @input="autoGrow"
+          @focus="onFocus"
+          @blur="onBlur"
+          @keydown.enter.exact.prevent="sendMessage"
+          @keydown.enter.shift.exact.prevent="newLine"
+          @keydown.esc="onEscape"
         ></textarea>
+        <div class="absolute right-2 bottom-2 text-xs text-gray-400" v-if="showCharCount">
+          {{ message.length }}/2000
+        </div>
       </div>
 
       <button
@@ -158,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import MaterialIcon from '@/components/icons/MaterialIcon.vue'
 import api from '@/services/api'
 import sessionManager from '@/services/sessionManager'
@@ -167,6 +178,49 @@ import { v4 as uuidv4 } from 'uuid'
 const emit = defineEmits(['message-sent'])
 const message = ref('')
 const selectedFiles = ref([])
+const messageInput = ref(null)
+const showCharCount = ref(false)
+
+// Auto-grow textarea function
+const autoGrow = () => {
+  if (!messageInput.value) return
+  
+  // Reset height to auto to accurately calculate new height
+  messageInput.value.style.height = 'auto'
+  
+  // Calculate new height
+  const newHeight = Math.min(messageInput.value.scrollHeight, 200)
+  messageInput.value.style.height = `${newHeight}px`
+  
+  // Show char count when approaching limit
+  showCharCount.value = message.value.length > 1000
+}
+
+// Handle new line with Shift+Enter
+const newLine = (event) => {
+  const cursorPosition = event.target.selectionStart
+  message.value = message.value.slice(0, cursorPosition) + '\n' + message.value.slice(cursorPosition)
+  
+  // Wait for next tick to set cursor position
+  nextTick(() => {
+    event.target.selectionStart = event.target.selectionEnd = cursorPosition + 1
+    autoGrow()
+  })
+}
+
+// Focus handlers
+const onFocus = () => {
+  showCharCount.value = message.value.length > 1000
+}
+
+const onBlur = () => {
+  showCharCount.value = false
+}
+
+// Escape key handler
+const onEscape = () => {
+  messageInput.value?.blur()
+}
 // Initialize or get existing session ID
 const sessionId = ref(sessionManager.getSessionId() || uuidv4())
 

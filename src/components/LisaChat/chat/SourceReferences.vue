@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isHidden && sources.length > 0" class="source-references border border-purple-200 rounded-lg p-4 bg-purple-50">
+  <div v-if="!isHidden && sources.length > 0" class="source-references border border-purple-200 rounded-lg p-4 bg-purple-50">
     <!-- Header -->
     <div class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-2">
@@ -124,10 +124,11 @@
       <div class="flex gap-2 mt-3">
         <button 
           @click="exportSources"
-          class="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+          :disabled="isExporting"
+          class="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm disabled:opacity-50"
         >
           <MaterialIcon name="download" size="text-sm" />
-          Export List
+          {{ isExporting ? 'Exporting...' : 'Export List' }}
         </button>
         <button 
           @click="copyAllSources"
@@ -140,31 +141,134 @@
     </div>
   </div>
 
-  <div 
-  v-if="sources.length > 0">
-      <h3 class="font-semibold text-purple-900">Source Reference Image</h3>
-        <div  v-for="(source, index) in displayedSources" :key="index">
-            <!-- Render image if src is an image -->
-            <img 
-              v-if="isImage(source)" 
-              :src="server_URL + source" 
-              alt="Preview"
-            />
+  <div v-if="sources.length > 0" class="source-preview mt-4">
+    <h3 class="font-semibold text-purple-900 mb-3">Source References</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 ">
+      <div 
+        v-for="(source, index) in displayedSources" 
+        :key="index"
+        class="source-item group"
+        @click="openModal(source)"
+      >
+        <!-- Image Preview -->
+        <div class="preview-container">
+          <!-- <img 
+            v-if="isImage(source)" 
+            :src="server_URL + source" 
+            alt="Preview"
+            class="preview-image"
+          />
+          <div 
+            v-else 
+            class="document-preview"
+          >
+            <MaterialIcon :name="getFileIcon(source)" size="text-3xl" color="text-purple-600" />
+          </div> -->
 
-            <!-- Otherwise render iframe -->
-            <iframe 
-              v-else 
-              :src="server_URL + source" 
-              width="99%" 
-              height="auto" 
-              frameborder="0">
-            </iframe>
-            <p>
-              {{ source }}
-            </p>
+          <!-- <iframe 
+            v-if="shouldShowInIframe(selectedSource)" 
+            :src="server_URL + source" 
+            class="modal-iframe"
+          ></iframe> -->
+          <img 
+            v-if="!shouldShowInIframe(selectedSource)" 
+            :src="server_URL + source" 
+            alt="Full Preview"
+          />
+          <div 
+            v-else 
+            class="document-preview"
+          >
+            <MaterialIcon :name="getFileIcon(source)" size="text-3xl" color="text-purple-600" />
           </div>
-        <p class="text-sm text-purple-700">{{ sources.length }} document{{ sources.length > 1 ? 's' : '' }} referenced</p>
+          
+          <!-- Hover Overlay -->
+          <div class="preview-overlay">
+            <button class="preview-button">
+              <MaterialIcon name="zoom_in" size="text-xl" color="text-white" />
+              <span>Preview</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- File Info -->
+        <div class="source-info flex items-center gap-2">
+          <h4 class="source-title">{{ getFileName(source) }}</h4>
+          <span class="source-type">{{ getFileExtension(source) }}</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Modal -->
+    <transition name="fade">
+      <div v-if="selectedSource" class="modal-overlay" @click="closeModal">
+        <div class="modal-container" @click.stop>
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h3 class="modal-title">{{ getFileName(selectedSource) }}</h3>
+            <button @click="closeModal" class="modal-close">
+              <MaterialIcon name="close" size="text-xl" />
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="modal-content">
+            <iframe 
+              v-if="shouldShowInIframe(selectedSource)" 
+              :src="server_URL + selectedSource" 
+              class="modal-iframe"
+            ></iframe>
+            <img 
+              v-else
+              :src="server_URL + selectedSource" 
+              alt="Full Preview"
+              class="modal-image"
+            />
+            <!-- <div 
+              v-else 
+              class="flex items-center justify-center p-8"
+            >
+              <MaterialIcon :name="getFileIcon(selectedSource)" size="text-3xl" color="text-purple-600" />
+              <p class="ml-2 text-gray-600">Preview not available</p>
+            </div> -->
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="modal-footer">
+            <button 
+              @click="copySource(server_URL + selectedSource)"
+              class="modal-action-btn"
+            >
+              <MaterialIcon name="content_copy" size="text-sm" />
+              Copy Link
+            </button>
+            <a 
+              :href="server_URL + selectedSource" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="modal-action-btn"
+            >
+              <MaterialIcon name="open_in_new" size="text-sm" />
+              Open in New Tab
+            </a>
+          </div>
+        </div>
+      </div>
+    </transition>
+    
+    <div class="flex flex-row gap-3 justify-between items-center mt-4">
+      <p class="text-sm text-purple-700 mt-3">
+        {{ sources.length }} document{{ sources.length > 1 ? 's' : '' }} referenced
+      </p>
+      <button 
+         v-if="sources.length > 3"
+         @click="toggleShowAll"
+         class="px-3 text-center text-purple-600 hover:text-purple-800 text-sm font-medium py-2 rounded bg-purple-200 transition-colors"
+       >
+         {{ showAll ? 'Show less' : `Show ${sources.length - 3} more sources` }}
+       </button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -181,23 +285,48 @@ const props = withDefaults(defineProps<Props>(), {
   expanded: false
 })
 
-let isHidden = false;
+const isHidden = ref(true) // Fixed: Changed from true to false to show by default
 
 const server_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Check if file extension is image
-const isImage = (src) => {
-  return /\.(jpg|jpeg|png|gif|webp)$/i.test(src);
+// File type checking functions
+const isImage = (src: string): boolean => {
+  return /\.(jpg|jpeg|png|gif|webp|bmp|tiff|svg|ico|heic)$/i.test(src);
 };
 
+const isDocumentType = (src: string): boolean => {
+  return /\.(doc|docx|xls|xlsx|ppt|pptx|txt|csv|rtf)$/i.test(src);
+};
+
+const isPDF = (src: string): boolean => {
+  return /\.pdf$/i.test(src);
+};
+
+// Check if file should be shown in iframe (PDF or other documents)
+const shouldShowInIframe = (src: string): boolean => {
+  return isPDF(src) || isDocumentType(src);
+};
 
 const isExpanded = ref(props.expanded)
 const showAll = ref(false)
 const isExporting = ref(false)
+const selectedSource = ref<string | null>(null)
 const { showSuccess, showError, showInfo } = useToast()
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value
+}
+
+const openModal = (source: string) => {
+  selectedSource.value = source
+  // Prevent body scrolling when modal is open
+  document.body.style.overflow = 'hidden'
+}
+
+const closeModal = () => {
+  selectedSource.value = null
+  // Restore body scrolling
+  document.body.style.overflow = ''
 }
 
 const toggleShowAll = () => {
@@ -233,36 +362,52 @@ const getFileExtension = (source: string): string => {
 }
 
 const getFileIcon = (source: string): string => {
-  const extension = getFileExtension(source).toLowerCase()
+  if (isPDF(source)) {
+    return 'picture_as_pdf';
+  }
   
+  if (isImage(source)) {
+    return 'image';
+  }
+  
+  // Get extension for other file types
+  const extension = getFileExtension(source).toLowerCase();
+  
+  // Document types
+  if (isDocumentType(source)) {
+    switch (extension) {
+      case 'doc':
+      case 'docx':
+      case 'rtf':
+        return 'description';
+      case 'txt':
+      case 'csv':
+        return 'text_snippet';
+      case 'xls':
+      case 'xlsx':
+        return 'table_chart';
+      case 'ppt':
+      case 'pptx':
+        return 'slideshow';
+      default:
+        return 'article';
+    }
+  }
+  
+  // Media types
   switch (extension) {
-    case 'pdf':
-      return 'picture_as_pdf'
-    case 'doc':
-    case 'docx':
-      return 'description'
-    case 'txt':
-      return 'text_snippet'
-    case 'xls':
-    case 'xlsx':
-      return 'table_chart'
-    case 'ppt':
-    case 'pptx':
-      return 'slideshow'
-    case 'jpg':
-    case 'jpeg':
-    case 'png':
-    case 'gif':
-      return 'image'
     case 'mp4':
     case 'avi':
     case 'mov':
-      return 'movie'
+    case 'webm':
+      return 'movie';
     case 'mp3':
     case 'wav':
-      return 'audiotrack'
+    case 'ogg':
+    case 'flac':
+      return 'audiotrack';
     default:
-      return 'insert_drive_file'
+      return 'insert_drive_file';
   }
 }
 
@@ -386,6 +531,197 @@ const sourceStats = computed(() => {
 
 .max-h-48::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Source Preview Grid */
+.source-item {
+  background-color: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgb(208, 204, 212);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.source-item:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-color: rgb(233, 213, 255);
+  transform: scale(1.02);
+}
+
+.preview-container {
+  position: relative;
+  aspect-ratio: 16/9;
+  background-color: rgb(245, 243, 255);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.document-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(245, 243, 255);
+}
+
+.preview-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.group:hover .preview-overlay {
+  opacity: 1;
+}
+
+.preview-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  color: white;
+  font-weight: 500;
+}
+
+.source-info {
+  padding: 0.75rem;
+}
+
+.source-title {
+  font-weight: 500;
+  color: rgb(17, 24, 39);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.source-type {
+  font-size: 0.75rem;
+  color: rgb(147, 51, 234);
+  background-color: rgb(245, 243, 255);
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  display: inline-block;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.modal-container {
+  background-color: white;
+  border-radius: 0.75rem;
+  max-width: 56rem;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.modal-title {
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: rgb(17, 24, 39);
+}
+
+.modal-close {
+  padding: 0.25rem;
+  color: rgb(107, 114, 128);
+  border-radius: 9999px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  color: rgb(55, 65, 81);
+  background-color: rgb(243, 244, 246);
+}
+
+.modal-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  min-height: 0;
+}
+
+.modal-image {
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.modal-iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 60vh;
+  border: none;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid rgb(229, 231, 235);
+}
+
+.modal-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: rgb(245, 243, 255);
+  color: rgb(109, 40, 217);
+  transition: background-color 0.2s;
+}
+
+.modal-action-btn:hover {
+  background-color: rgb(237, 233, 254);
+}
+
+/* Animations */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 
 /* Source item animation */

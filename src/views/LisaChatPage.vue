@@ -219,28 +219,32 @@ const initializeSession = async () => {
         const { data } = await api.getChatHistory(sessionId);
         
         // Load messages in order if we have any
-        if (data && Array.isArray(data) && data.length > 0) {
-          const sortedHistory = [...data].sort((a, b) => {
-            const timeA = new Date(a.timestamp || a.created_at).getTime();
-            const timeB = new Date(b.timestamp || b.created_at).getTime();
-            return timeA - timeB;
-          });
+        if (data && Array.isArray(data)) {
+          if (data.length > 0) {
+            const sortedHistory = [...data].sort((a, b) => {
+              const timeA = new Date(a.timestamp || a.created_at).getTime();
+              const timeB = new Date(b.timestamp || b.created_at).getTime();
+              return timeA - timeB;
+            });
 
-          // Add each message to the chat
-          for (const msg of sortedHistory) {
-            if (messageList.value?.handleNewMessage) {
-              await messageList.value.handleNewMessage({
-                type: 'text',
-                content: msg.content,
-                response: msg.role === 'assistant' ? msg.content : undefined,
-                sender: msg.role,
-                sessionId: sessionId,
-                isHistory: true,
-                timestamp: msg.timestamp || msg.created_at
-              });
+            // Add each message to the chat
+            for (const msg of sortedHistory) {
+              if (messageList.value?.handleNewMessage) {
+                await messageList.value.handleNewMessage({
+                  type: 'text',
+                  content: msg.content,
+                  response: msg.role === 'assistant' ? msg.content : undefined,
+                  sender: msg.role,
+                  sessionId: sessionId,
+                  isHistory: true,
+                  timestamp: msg.timestamp || msg.created_at
+                });
+              }
             }
+            showSuccess('Chat history loaded successfully');
+          } else {
+            console.log('New session initialized:', sessionId);
           }
-          showSuccess('Chat history loaded successfully');
         }
       } catch (error) {
         console.error('Failed to load chat history:', error);
