@@ -79,7 +79,7 @@ const api = {
     const formData = new FormData();
     formData.append('file', file);
 
-    return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+  return axios.post(`${import.meta.env.VITE_API_BASE_URL}/documents/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Bearer ${HF_BEARER_TOKEN}`
@@ -99,7 +99,7 @@ const api = {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
 
-    return axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+  return axios.post(`${import.meta.env.VITE_API_BASE_URL}/documents/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Bearer ${HF_BEARER_TOKEN}`
@@ -114,7 +114,7 @@ const api = {
       const formData = new FormData();
       files.forEach(file => formData.append('files', file));
 
-      const result = await axios.post('http://109.228.57.128:8080/documents/upload', formData, {
+  const result = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/documents/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${HF_BEARER_TOKEN}`
@@ -173,7 +173,23 @@ const api = {
     let timeoutHandle: number | undefined;
 
     try {
-      const sessionId = sessionManager.getSessionId();
+      let sessionId = sessionManager.getSessionId();
+      
+      // If no session ID exists, create a new session
+      if (!sessionId) {
+        console.log('No session ID found, creating new session...');
+        try {
+          const newSession = await this.createNewSession();
+          sessionId = newSession.data?.session_id;
+          if (!sessionId) {
+            throw new Error('Failed to create new session');
+          }
+          console.log('New session created:', sessionId);
+        } catch (error) {
+          console.error('Failed to create new session:', error);
+          throw new Error('Failed to create new chat session');
+        }
+      }
       
       // Set up timeout handler
       timeoutHandle = window.setTimeout(() => {
@@ -181,7 +197,7 @@ const api = {
       }, timeoutDuration);
 
       // Make the request
-      const response = await axios.post('http://109.228.57.128:8080/chat/query', {
+  const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/chat/query`, {
         message: message,
         session_id: sessionId
       }, {
@@ -311,7 +327,7 @@ const api = {
 
   // Legacy chat query method for backward compatibility
   async chatQueryLegacy(message: string): Promise<ApiResponse<AskResponse>> {
-    return axios.post('http://109.228.57.128:8080/chat/query', {
+  return axios.post(`${import.meta.env.VITE_API_BASE_URL}/chat/query`, {
       message: message
     }, {
       headers: {
@@ -388,7 +404,7 @@ const api = {
 
   async getStatus(): Promise<ApiResponse<StatusResponse>> {
     try {
-      const response = await apiClient.get('/status');
+      const response = await apiClient.get('/health');
       return response;
     } catch (error) {
       console.error('API Error:', error);
@@ -414,7 +430,7 @@ const api = {
   // Session Management Methods
   async getChatSessions(): Promise<ApiResponse> {
     try {
-      const response = await axios.get('http://109.228.57.128:8080/chat/sessions', {
+  const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/chat/sessions`, {
         headers: {
           'Authorization': `Bearer ${HF_BEARER_TOKEN}`
         }
@@ -432,7 +448,7 @@ const api = {
         throw new Error('Session ID is required');
       }
 
-      const response = await axios.get(`http://109.228.57.128:8080/chat/history/${sessionId}`, {
+  const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}chat/history/${sessionId}`, {
         headers: {
           'Authorization': `Bearer ${HF_BEARER_TOKEN}`,
           'Content-Type': 'application/json'
@@ -452,7 +468,8 @@ const api = {
 
   async createNewSession(): Promise<ApiResponse> {
     try {
-      const response = await axios.post('http://109.228.57.128:8080/chat/query', {
+      console.log('Creating new session...');
+  const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/chat/query`, {
         message: "",
         new_session: true
       }, {
@@ -462,20 +479,34 @@ const api = {
         }
       });
 
-      // Set session ID in manager
-      if (response.data?.session_id) {
-        sessionManager.setSessionId(response.data.session_id);
+      // Extract session ID from response
+      const sessionId = response.data?.session_id;
+      
+      if (!sessionId) {
+        throw new Error('No session ID returned from server');
       }
+
+      // Set session ID in manager and reset message count
+      const session = await sessionManager.setSessionId(sessionId, 0);
+      console.log('New session created and stored:', sessionId);
+
+      // Dispatch session created event
+      window.dispatchEvent(new CustomEvent('sessionCreated', {
+        detail: {
+          sessionId: session.id,
+          messageCount: 0
+        }
+      }));
 
       return response;
     } catch (error: any) {
-      console.error('Failed to create session:', error);
-      throw new Error(error.response?.data?.message || 'Failed to create chat session');
+      console.error('Failed to create new session:', error);
+      throw new Error('Failed to create new chat session');
     }
   },
 
   async deleteSession(sessionId: string): Promise<ApiResponse> {
-    return axios.delete(`http://109.228.57.128:8080/chat/sessions/${sessionId}`, {
+  return axios.delete(`${import.meta.env.VITE_API_BASE_URL}/chat/sessions/${sessionId}`, {
       headers: {
         'Authorization': `Bearer ${HF_BEARER_TOKEN}`
       }

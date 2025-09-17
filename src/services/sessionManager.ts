@@ -17,9 +17,9 @@ class SessionManager {
   private currentSession: ChatSession | null = null
 
   /**
-   * Get or create the current chat session
+   * Get the current chat session if it exists
    */
-  getCurrentSession(): ChatSession {
+  getCurrentSession(): ChatSession | null {
     if (this.currentSession && !this.isSessionExpired(this.currentSession)) {
       // Update last used time
       this.currentSession.lastUsed = Date.now()
@@ -27,7 +27,7 @@ class SessionManager {
       return this.currentSession
     }
 
-    // Load from storage or create new
+    // Load from storage
     const stored = this.loadStoredSession()
     if (stored && !this.isSessionExpired(stored)) {
       this.currentSession = stored
@@ -36,15 +36,15 @@ class SessionManager {
       return this.currentSession
     }
 
-    // Create new session
-    return this.createNewSession()
+    return null
   }
 
   /**
    * Get the current session ID for API calls
    */
-  getSessionId(): string {
-    return this.getCurrentSession().id
+  getSessionId(): string | null {
+    const session = this.getCurrentSession()
+    return session ? session.id : null
   }
 
   /**
@@ -68,9 +68,11 @@ class SessionManager {
    */
   incrementMessageCount(): void {
     const session = this.getCurrentSession()
-    session.messageCount++
-    session.lastUsed = Date.now()
-    this.saveSession(session)
+    if (session) {
+      session.messageCount++
+      session.lastUsed = Date.now()
+      this.saveSession(session)
+    }
   }
 
   /**
@@ -84,7 +86,7 @@ class SessionManager {
   /**
    * Set session ID from external source (e.g., server response)
    */
-  async setSessionId(sessionId: string, messageCount: number = 0): Promise<void> {
+  async setSessionId(sessionId: string, messageCount: number = 0): Promise<ChatSession> {
     // Create or update session
     const session: ChatSession = {
       id: sessionId,
@@ -97,7 +99,7 @@ class SessionManager {
     this.currentSession = session
     this.saveSession(session)
     
-    // No need to activate the session as we'll use it when sending the first message
+    return session
   }
 
   /**
@@ -107,7 +109,7 @@ class SessionManager {
   private async activateSession(sessionId: string): Promise<void> {
     try {
       // Only activate if really needed, without sending empty message
-      await fetch('http://109.228.57.128:8080/chat/query', {
+  await fetch(`${import.meta.env.VITE_API_BASE_URL}/chat/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,12 +136,22 @@ class SessionManager {
    * Get session info for debugging
    */
   getSessionInfo(): { 
-    id: string; 
+    id: string | null; 
     age: string; 
     messageCount: number; 
     isExpired: boolean 
   } {
     const session = this.getCurrentSession()
+    
+    if (!session) {
+      return {
+        id: null,
+        age: '0h 0m',
+        messageCount: 0,
+        isExpired: true
+      }
+    }
+
     const ageMs = Date.now() - session.createdAt
     const ageHours = Math.floor(ageMs / (60 * 60 * 1000))
     const ageMinutes = Math.floor((ageMs % (60 * 60 * 1000)) / (60 * 1000))

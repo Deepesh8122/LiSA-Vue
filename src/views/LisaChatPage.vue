@@ -306,17 +306,30 @@ onMounted(() => {
 
 const handleMessage = async (messageData: MessageData) => {
   try {
-    const sessionId = route.params.sessionId as string;
+    let sessionId = route.params.sessionId as string;
     
-    // Don't create new session here - it should already exist
+    // If no session exists, create one
     if (!sessionId) {
-      throw new Error('No session ID found. Please create a new chat session.');
+      try {
+        const newSession = await sessionManager.createNewSession();
+        sessionId = newSession.id;
+        
+        // Update the route with the new session ID
+        await router.push({ 
+          name: 'chat', 
+          params: { sessionId: sessionId },
+          replace: true
+        });
+      } catch (error) {
+        console.error('Failed to create new session:', error);
+        throw new Error('Failed to create new chat session. Please try again.');
+      }
     }
     
     const messageWithSession = {
       ...messageData,
       sessionId,
-      isNewSession: false // Never treat as new session here
+      isNewSession: !route.params.sessionId // Mark as new session if we just created it
     };
     
     // Pass the message to MessageList component

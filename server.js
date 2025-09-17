@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // Set up the API proxy
 app.use('/api', createProxyMiddleware({
-  target: 'http://109.228.57.128:8000',
+  target: process.env.VITE_API_BASE_URL || 'https://lisa-front-api.ha1ltd.com/',
   changeOrigin: true,
   pathRewrite: {
     '^/api': '' // Remove /api prefix when forwarding

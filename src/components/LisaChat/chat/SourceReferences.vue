@@ -183,7 +183,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 let isHidden = false;
 
-const server_URL = 'http://109.228.57.128:8080';
+const server_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Check if file extension is image
 const isImage = (src) => {
